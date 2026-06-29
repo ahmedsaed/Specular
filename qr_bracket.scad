@@ -1,0 +1,175 @@
+// =====================================================================
+//  QR BRACKET  -- screw-free tube attachment, PUSH-ON + INSIDE CLIP
+//
+//  The plain base lives in focuser_base.scad; this is the screw-free
+//  attachment version.
+//
+//  How it works:
+//    - 3 straight SNUG pins (~hole size) go through the 3 tube holes.
+//      The snug fit is what gives rigidity / no wobble.
+//    - Push the bracket straight onto the tube; pins poke into the cage.
+//    - From inside the open cage, snap a printed C-CLIP onto each pin's
+//      groove. The clip traps the wall between the saddle and the clip.
+//    - Screw-free, tool-free, rigid. Removable (pop the clips) but this
+//      joint is rarely removed, so that's fine.
+//
+//  Two pin modes (pin_mode):
+//    "clip"   = grooved pins + snap-on C-clips (print the clip x3)
+//    "thread" = M4 external studs + nuts (steel M4 nut, or the curved nut)
+//
+//  part = "bracket" | "clip" | "wall"
+//  (clip: print 3.  wall: mock tube-wall segment to test on.)
+// =====================================================================
+
+part = "bracket";
+
+// ---- tube + base (shared with focuser_base) ----
+tube_od        = 160.7;
+wall_thk       = 5;
+pad_diameter   = 60;
+base_thickness = 6.8;
+saddle_wrap    = 7;
+bore_d         = 31;
+stud_spacing   = 36.5;
+clocking_angle = 90;
+carbon_hole_d  = 4.0;       // measured hole diameter (set when scope is back)
+
+// ---- pin mode ----
+pin_mode   = "clip";        // "clip" = grooved pins + C-clips
+                            // "thread" = M4 studs + nuts (steel M4 or the curved nut)
+
+// ---- pins (shared) ----
+pin_clear  = 0.30;          // pin = hole - this (snug fit = rigidity). Raise if too tight.
+
+// ---- clip mode ----
+groove_d   = 2.3;           // necked groove diameter the clip grabs
+groove_w   = 2.0;           // groove width (>= clip thickness)
+tip_h      = 1.6;           // shoulder below the groove (+ a rounded end)
+
+// ---- thread mode (M4 x 0.7 external stud into the cage) ----
+thread_pitch = 0.7;
+thread_clear = 0.35;        // crest undersize so a steel M4 nut threads on AND it
+                            // passes the hole. Bigger = looser; smaller = tighter.
+thread_len   = 8;           // threaded length protruding into the cage (plenty for a nut)
+thread_tooth = 110;         // thread profile tooth angle
+right_hand   = 1;           // 1 = standard RH thread; -1 if a nut won't start
+
+// ---- clip (C-washer, print 3) ----
+clip_od    = 9;
+clip_thk   = 1.6;
+clip_bore  = groove_d + 0.3;   // hugs the groove with a little clearance
+clip_mouth = groove_d - 0.5;   // opening < groove_d so it snaps on and grips
+
+// ---- wall mock (for bench testing) ----
+wall_patch_d = 58;
+
+$fn = 120;
+// =====================================================================
+Rt       = tube_od/2;
+wall_R   = (tube_od - 2*wall_thk)/2;
+stud_bcd = stud_spacing/sqrt(3)*2;
+pin_d    = carbon_hole_d - pin_clear;
+top_z    = base_thickness;
+
+// The tube is a cylinder whose axis runs along Y, apex at z=0. So the wall
+// height at a hole depends ONLY on its X (circumferential) position. The
+// centreline hole (X=0) is at the apex; the side holes sit lower.
+function zo(x) = -Rt + sqrt(Rt*Rt    - x*x);   // outer wall (saddle contact) z
+function zi(x) = -Rt + sqrt(wall_R*wall_R - x*x); // inner wall z
+
+function holexy(a) = [(stud_bcd/2)*cos(a), (stud_bcd/2)*sin(a)];
+A = holexy(clocking_angle);
+B = holexy(clocking_angle + 120);
+C = holexy(clocking_angle + 240);
+
+// ---------------- base ----------------
+module saddle_cut()
+    translate([0,0,-Rt]) rotate([90,0,0]) cylinder(r = Rt, h = pad_diameter*2, center = true);
+
+module base_solid()
+    difference() {
+        translate([0,0,-saddle_wrap]) cylinder(d = pad_diameter, h = base_thickness + saddle_wrap);
+        saddle_cut();
+        translate([0,0,-saddle_wrap-1]) cylinder(d = bore_d, h = base_thickness + saddle_wrap + 2);
+    }
+
+module hole_positions() for (p = [A,B,C]) translate([p[0],p[1],0]) children();
+
+// ---------------- clip-mode pin: straight grooved ----------------
+//  full-diameter (snug) through the wall, then a groove for the clip, then
+//  a short shoulder + rounded end. Groove sits at THIS hole's inner-wall
+//  height, so side pins come out longer than the centreline pin.
+module pin_clip(p) translate([p[0], p[1], 0]) {
+    w = zi(p[0]);                                                       // inner wall z here
+    translate([0,0, w])               cylinder(d = pin_d,   h = top_z - w); // through + into base
+    translate([0,0, w-groove_w])      cylinder(d = groove_d, h = groove_w);  // clip groove
+    translate([0,0, w-groove_w-tip_h]) cylinder(d = pin_d, h = tip_h);       // lower shoulder
+    translate([0,0, w-groove_w-tip_h]) sphere(d = pin_d, $fn = 40);          // rounded end
+}
+
+// ---------------- thread-mode pin: M4 external stud ----------------
+//  smooth snug section through the wall (rigidity), then an M4 external
+//  thread protruding into the cage for a nut. Groove/thread sit at THIS
+//  hole's inner-wall height, so side pins are longer than the centre pin.
+module ext_thread(maj_d, p, length) {
+    Rmaj  = maj_d/2 - thread_clear/2;
+    Rmin  = Rmaj - 0.6134*p;
+    turns = length/p;
+    linear_extrude(height = length, twist = right_hand*-360*turns,
+                   convexity = 10, slices = ceil(turns*24))
+        union() {
+            circle(r = Rmin, $fn = 40);
+            polygon([[Rmin*cos( thread_tooth/2), Rmin*sin( thread_tooth/2)],
+                     [Rmaj, 0],
+                     [Rmin*cos(-thread_tooth/2), Rmin*sin(-thread_tooth/2)]]);
+        }
+}
+
+module pin_thread(p) translate([p[0], p[1], 0]) {
+    w = zi(p[0]);                                                  // inner wall z here
+    translate([0,0, w]) cylinder(d = pin_d, h = top_z - w);        // smooth snug through-wall
+    translate([0,0, w-thread_len]) ext_thread(4.0, thread_pitch, thread_len); // M4 stud into cage
+    translate([0,0, w-thread_len-1.2]) cylinder(d1 = 1.0, d2 = pin_d, h = 1.2); // lead-in tip
+}
+
+module bracket() {
+    union() {
+        base_solid();
+        for (p = [A,B,C]) if (pin_mode == "thread") pin_thread(p); else pin_clip(p);
+    }
+    echo(str("BRACKET (", pin_mode, "): pin ", pin_d,
+             " mm. Inner-wall z: A=", zi(A[0]), " B/C=", zi(B[0]),
+             " -> side pins ", zi(A[0])-zi(B[0]), " mm longer"));
+}
+
+// ---------------- C-clip (print 3) ----------------
+module clip() {
+    difference() {
+        cylinder(d = clip_od, h = clip_thk);
+        translate([0,0,-0.5]) cylinder(d = clip_bore, h = clip_thk + 1);     // groove bore
+        translate([-clip_mouth/2, 0, -0.5]) cube([clip_mouth, clip_od, clip_thk + 1]); // mouth
+    }
+    echo(str("CLIP: od ", clip_od, " thk ", clip_thk, " bore ", clip_bore,
+             " mouth ", clip_mouth, " mm (snaps onto a ", groove_d, " mm groove)"));
+}
+
+// ---------------- mock tube-wall segment (for testing) ----------------
+module wall_seg() {
+    difference() {
+        intersection() {
+            translate([0,0,-Rt]) rotate([90,0,0])
+                difference() {
+                    cylinder(r = Rt,     h = wall_patch_d*1.6, center = true);
+                    cylinder(r = wall_R, h = wall_patch_d*1.6+2, center = true);
+                }
+            translate([0,0,-8]) cylinder(d = wall_patch_d, h = 10);
+        }
+        hole_positions() translate([0,0,-9]) cylinder(d = carbon_hole_d, h = 12);
+    }
+    echo(str("WALL SEGMENT: patch ", wall_patch_d, " mm, 3 holes ", carbon_hole_d, " mm"));
+}
+
+// ---------------- select ----------------
+if      (part == "bracket") bracket();
+else if (part == "clip")    clip();
+else if (part == "wall")    wall_seg();
