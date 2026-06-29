@@ -60,6 +60,21 @@ clip_thk   = 1.6;
 clip_bore  = groove_d + 0.3;   // hugs the groove with a little clearance
 clip_mouth = groove_d - 0.5;   // opening < groove_d so it snaps on and grips
 
+// ---- bayonet receiver (FEMALE; the focuser's male lugs lock into this) ----
+add_bayonet   = true;
+bay_socket_id = 42;     // socket bore (the male body drops into this)
+bay_ledge_id  = 37;     // inward lip diameter (lugs catch under it; > bore_d)
+bay_ring_od   = 54;     // outer diameter of the bayonet ring (the male skirt wraps this)
+bay_ring_h    = 8;      // ring height above the register face
+bay_ledge_t   = 2.2;    // lip thickness at the top
+bay_n         = 3;      // number of lugs / gaps
+bay_gap_arc   = 64;     // entry-gap arc (deg) the lugs pass through
+bay_stop_arc  = 4;      // width of the rotation stop
+
+// ---- lock screw (radial M3 through the male skirt into the ring) ----
+lock_tap      = 2.8;    // M3 self-tap hole in the ring wall
+lock_angle    = 0;      // angular position of the lock screw (bracket frame)
+
 // ---- wall mock (for bench testing) ----
 wall_patch_d = 58;
 
@@ -132,10 +147,46 @@ module pin_thread(p) translate([p[0], p[1], 0]) {
     translate([0,0, w-thread_len-1.2]) cylinder(d1 = 1.0, d2 = pin_d, h = 1.2); // lead-in tip
 }
 
+// ---------------- bayonet receiver (female) ----------------
+//  A ring on top of the base. Inward lip at the top, broken by 3 gaps; a
+//  channel below; the base top is the register face. The focuser's lugs
+//  pass the gaps, then twist under the lip until they hit a stop.
+module bayonet_female() {
+    ledge_arc = 360/bay_n - bay_gap_arc;          // solid lip arc between gaps
+    rr0 = bay_ledge_id/2;                          // lip inner radius
+    rw  = (bay_socket_id - bay_ledge_id)/2 + 0.8;  // lip width (+overlap into the ring wall)
+    translate([0,0, top_z]) {
+        // outer ring wall (socket)
+        difference() {
+            cylinder(d = bay_ring_od, h = bay_ring_h);
+            translate([0,0,-1]) cylinder(d = bay_socket_id, h = bay_ring_h + 2);
+        }
+        for (i = [0:bay_n-1]) {
+            c = (360/bay_n)*(i + 0.5);             // lip centres: 60,180,300 for n=3
+            // lip (the part the lugs hook under)
+            rotate([0,0, c - ledge_arc/2])
+                translate([0,0, bay_ring_h - bay_ledge_t])
+                    rotate_extrude(angle = ledge_arc)
+                        translate([rr0, 0]) square([rw, bay_ledge_t]);
+            // rotation stop at the far end (full height; merges with lip + wall)
+            rotate([0,0, c + ledge_arc/2 - bay_stop_arc])
+                rotate_extrude(angle = bay_stop_arc)
+                    translate([rr0, 0]) square([rw, bay_ring_h]);
+        }
+    }
+}
+
 module bracket() {
-    union() {
-        base_solid();
-        for (p = [A,B,C]) if (pin_mode == "thread") pin_thread(p); else pin_clip(p);
+    difference() {
+        union() {
+            base_solid();
+            for (p = [A,B,C]) if (pin_mode == "thread") pin_thread(p); else pin_clip(p);
+            if (add_bayonet) bayonet_female();
+        }
+        // radial lock-screw tap hole through the ring wall
+        if (add_bayonet)
+            rotate([0,0, lock_angle]) translate([0,0, top_z + bay_ring_h/2])
+                rotate([0,90,0]) cylinder(d = lock_tap, h = bay_ring_od/2 + 3, $fn = 24);
     }
     echo(str("BRACKET (", pin_mode, "): pin ", pin_d,
              " mm. Inner-wall z: A=", zi(A[0]), " B/C=", zi(B[0]),
