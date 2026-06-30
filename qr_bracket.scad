@@ -17,8 +17,10 @@
 //    "clip"   = grooved pins + snap-on C-clips (print the clip x3)
 //    "thread" = M4 external studs + nuts (steel M4 nut, or the curved nut)
 //
-//  part = "bracket" | "clip" | "wall"
-//  (clip: print 3.  wall: mock tube-wall segment to test on.)
+//  part = "bracket" | "clip" | "pins" | "washer" | "wall"
+//  (clip: print 3.  pins: the 3 pins alone for a fit test.  washer: curved head-
+//   washer for screw mode, print 3 at washer_tilt 0 / +13 / -13.  wall: mock tube-
+//   wall segment to push the pins through.)
 // =====================================================================
 
 part = "bracket";
@@ -35,8 +37,12 @@ clocking_angle = 90;
 carbon_hole_d  = 4.0;       // measured hole diameter (set when scope is back)
 
 // ---- pin mode ----
-pin_mode   = "clip";        // "clip" = grooved pins + C-clips
+pin_mode   = "clip";        // "clip"   = grooved pins + C-clips
                             // "thread" = M4 studs + nuts (steel M4 or the curved nut)
+                            // "screw"  = NO pins; captive M4 nut slid into the base from
+                            //            the bore side, a 12mm M4 screw driven from inside
+                            //            the cage into it. Print 3 curved head-washers
+                            //            (part="washer", washer_tilt = 0 / +13 / -13).
 
 // ---- pins (shared) ----
 pin_clear  = 0.30;          // pin = hole - this (snug fit = rigidity). Raise if too tight.
@@ -53,6 +59,25 @@ thread_clear = 0.35;        // crest undersize so a steel M4 nut threads on AND 
 thread_len   = 8;           // threaded length protruding into the cage (plenty for a nut)
 thread_tooth = 110;         // thread profile tooth angle
 right_hand   = 1;           // 1 = standard RH thread; -1 if a nut won't start
+
+// ---- screw mode (12mm M4 from inside the cage into a captive nut in the base) ----
+//  The screw enters from the cage, crosses the tube wall + a thin clamp shelf, and
+//  threads into a hex nut that you slide in radially from the central bore. Tightening
+//  pulls the bracket onto the tube; the screw HEAD bears on the concave inner wall, so
+//  it needs a curved washer (part="washer") just like the curved nut.
+bscrew_clear = 4.6;     // M4 screw-shaft clearance through the bracket (carbon hole locates it)
+bnut_af      = 7.4;     // M4 nut across-flats (7.0) + 0.4 -> 0.2/side slot & pocket
+bnut_thk     = 3.6;     // slot height: M4 nut (3.2) + 0.4 headroom (screw seats it down on tighten)
+bnut_roof    = 1.6;     // material left above the nut, under the base top (retains the nut)
+bnut_grip    = 0.3;     // floor ridge at the channel mouth: nut rides over it and is held
+bnut_grip_len= 1.2;     // length of that ridge
+
+// ---- curved head-washer (screw mode; print 3: washer_tilt = 0 / +13 / -13) ----
+washer_od    = 9;       // washer outer diameter (M4 head ~7mm sits on it)
+washer_clr   = 4.6;     // M4 through-hole
+washer_h     = 2.5;     // min thickness at the thin edge after the convex carve
+washer_tilt  = 0;       // 0 = centre hole; +13 / -13 = the two side holes (mirror pair)
+washer_marg  = 4;       // stock above the apex, trimmed by the wall curve
 
 // ---- clip (C-washer, print 3) ----
 clip_od    = 9;
@@ -71,9 +96,11 @@ bay_n         = 3;      // number of lugs / gaps
 bay_gap_arc   = 64;     // entry-gap arc (deg) the lugs pass through
 bay_stop_arc  = 4;      // width of the rotation stop
 
-// ---- lock screw (radial M3 through the male skirt into the ring) ----
-lock_tap      = 2.8;    // M3 self-tap hole in the ring wall
+// ---- lock screw (radial M3; nut is captive in the male skirt) ----
+lock_tap      = 3.3;    // DOWEL hole in the ring for the screw TIP (threads are in
+                        // the skirt nut now, so this is a clearance dowel, not a tap)
 lock_angle    = 0;      // angular position of the lock screw (bracket frame)
+lock_drop     = 2.8;    // lock centre below the ring top (match the male)
 
 // ---- wall mock (for bench testing) ----
 wall_patch_d = 58;
@@ -176,21 +203,73 @@ module bayonet_female() {
     }
 }
 
+// ---------------- screw-mode captive nut slot ----------------
+//  At each tube hole: a hex pocket that seats the M4 nut, an entry channel from the
+//  bore so the nut slides in, a screw-shaft clearance up from the saddle face, and a
+//  tip relief through the roof into the (empty) socket cavity above. A small floor
+//  ridge at the channel mouth holds the nut from sliding back out toward the bore.
+module nut_slot(p) {
+    ah   = atan2(p[1], p[0]);               // this hole's angle
+    rh   = stud_bcd/2;                      // hole radius
+    znut_top = top_z - bnut_roof;           // nut band top  (roof above)
+    znut_bot = znut_top - bnut_thk;         // nut band bottom (clamp shelf below)
+    rotate([0,0, ah]) {
+        // hex seat at the hole
+        translate([rh, 0, znut_bot]) cylinder(d = bnut_af/cos(30), h = bnut_thk + 0.02, $fn = 6);
+        // entry channel from the bore out to the pocket, minus a floor ridge near the mouth
+        difference() {
+            translate([0, -bnut_af/2, znut_bot]) cube([rh, bnut_af, bnut_thk + 0.02]);
+            translate([bore_d/2 - 0.5, -bnut_af/2 - 0.1, znut_bot])
+                cube([bnut_grip_len, bnut_af + 0.2, bnut_grip]);            // ridge = retention
+        }
+        // screw-shaft clearance up from below (through the saddle face) to the nut
+        translate([rh, 0, -saddle_wrap - 1])
+            cylinder(d = bscrew_clear, h = znut_bot + saddle_wrap + 1.2);
+        // tip relief through the roof into the socket cavity (keeps the nut, frees the tip)
+        translate([rh, 0, znut_top - 0.01]) cylinder(d = bscrew_clear, h = bnut_roof + 1);
+    }
+}
+
 module bracket() {
     difference() {
         union() {
             base_solid();
-            for (p = [A,B,C]) if (pin_mode == "thread") pin_thread(p); else pin_clip(p);
+            if (pin_mode == "thread") for (p = [A,B,C]) pin_thread(p);
+            else if (pin_mode == "clip") for (p = [A,B,C]) pin_clip(p);
+            // pin_mode == "screw": no pins (captive nut + separate screw)
             if (add_bayonet) bayonet_female();
         }
+        if (pin_mode == "screw") for (p = [A,B,C]) nut_slot(p);
         // radial lock-screw tap hole through the ring wall
         if (add_bayonet)
-            rotate([0,0, lock_angle]) translate([0,0, top_z + bay_ring_h/2])
+            rotate([0,0, lock_angle]) translate([0,0, top_z + bay_ring_h - lock_drop])
                 rotate([0,90,0]) cylinder(d = lock_tap, h = bay_ring_od/2 + 3, $fn = 24);
     }
-    echo(str("BRACKET (", pin_mode, "): pin ", pin_d,
-             " mm. Inner-wall z: A=", zi(A[0]), " B/C=", zi(B[0]),
-             " -> side pins ", zi(A[0])-zi(B[0]), " mm longer"));
+    if (pin_mode == "screw")
+        echo(str("BRACKET (screw): captive M4 nut slot, shelf ", top_z - bnut_roof - bnut_thk,
+                 " mm at apex; slide nut from bore, drive 12mm M4 from inside + curved washer"));
+    else
+        echo(str("BRACKET (", pin_mode, "): pin ", pin_d,
+                 " mm. Inner-wall z: A=", zi(A[0]), " B/C=", zi(B[0]),
+                 " -> side pins ", zi(A[0])-zi(B[0]), " mm longer"));
+}
+
+// ---------------- curved head-washer (screw mode; print 3) ----------------
+//  Sits between the screw head and the concave inner tube wall so the head seats
+//  flush on the off-centre holes. Flat bottom (head bears), convex top (matches the
+//  wall, tilted for the side holes). Same trick as the curved nut.
+module head_washer() {
+    intersection() {
+        difference() {
+            cylinder(d = washer_od, h = washer_h + washer_marg);
+            translate([0,0,-1]) cylinder(d = washer_clr, h = washer_h + washer_marg + 2);
+        }
+        // keep only what is inside the inner-wall cylinder -> convex tilted top
+        translate([wall_R*sin(washer_tilt), 0, washer_h - wall_R*cos(washer_tilt)])
+            rotate([90,0,0]) cylinder(r = wall_R, h = washer_od*4, center = true, $fn = 480);
+    }
+    echo(str("WASHER: od ", washer_od, " hole ", washer_clr, " tilt ", washer_tilt,
+             " deg (convex R ", wall_R, ") -- print tilt 0 / +13 / -13"));
 }
 
 // ---------------- C-clip (print 3) ----------------
@@ -202,6 +281,19 @@ module clip() {
     }
     echo(str("CLIP: od ", clip_od, " thk ", clip_thk, " bore ", clip_bore,
              " mouth ", clip_mouth, " mm (snaps onto a ", groove_d, " mm groove)"));
+}
+
+// ---------------- pins-only test piece (print before the whole bracket) ----------------
+//  The 3 real pins (same geometry as the bracket), joined by a thin tie plate and
+//  flipped so they print upright. Push them through the wall coupon to test the snug
+//  fit + clip/nut grab before committing to the full bracket. Honours pin_mode.
+module pins_test() {
+    plate_t = 2.5;
+    translate([0,0, top_z + plate_t]) mirror([0,0,1]) {
+        hull() for (p = [A,B,C]) translate([p[0],p[1], top_z]) cylinder(d = pin_d + 7, h = plate_t);
+        for (p = [A,B,C]) if (pin_mode == "thread") pin_thread(p); else pin_clip(p);
+    }
+    echo(str("PINS TEST (", pin_mode, "): 3 pins on a ", plate_t, " mm tie plate, printed upright"));
 }
 
 // ---------------- mock tube-wall segment (for testing) ----------------
@@ -223,4 +315,6 @@ module wall_seg() {
 // ---------------- select ----------------
 if      (part == "bracket") bracket();
 else if (part == "clip")    clip();
+else if (part == "pins")    pins_test();
+else if (part == "washer")  head_washer();
 else if (part == "wall")    wall_seg();
