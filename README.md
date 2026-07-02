@@ -136,6 +136,60 @@ face is convex (R = inner radius ~75.3 mm) with an optional `seat_tilt`.
   3.3 mm pilot hole, steel screw self-taps.
 - Tilt/radius derived from circumference-based OD + 5 mm wall — re-confirm with the scope.
 
+## Secondary mirror holder — v1 (mirror mount only) (`secondary_holder.scad`)
+
+The original **secondary** mirror was **glued** straight to its mount by the builder
+and **detached during collimation on 2026-06-25**. A replacement 25 mm elliptical
+mirror (AliExpress `1005009092127851`, model **FJ-25**, ~35 mm major axis, first-surface)
+is on order. This part replaces the glue job with a proper **mechanical seat**.
+
+**Mechanism:** a 45° wedge presents a flat elliptical **pad** to the beam. The mirror's
+uncoated back rests on the pad (coated first surface faces the beam), held by **3 silicone
+dabs** — standard practice: allows thermal expansion, removable. A shallow **retaining lip**
+rings the mirror edge as a mechanical backstop, kept **shorter than the glass** so it never
+shadows the reflective surface (an `assert` blocks export if `lip_h >= mirror_thk`). Three
+shallow **pockets** key the silicone dabs.
+
+**v1 scope:** the mirror-holding part **only**. The scope's support is a 4-vane spider +
+central hub, but that coupling is **out of scope for v1** — the back of the wedge is a plain
+flat placeholder face for a future attach part. No collimation adjustment in v1.
+
+One parametric file, three parts via `part = "holder" | "mirror" | "coupon"`:
+- `holder` — the printable part.
+- `mirror` — holder + a mock glass slab, for a visual sanity check only (not printed).
+- `coupon` — the seat on a flat plate; a cheap mirror-fit / silicone test print.
+
+### Design parameters
+The mirror had not arrived at design time. **Bold = confirm before printing.**
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| `mirror_minor` | 25 mm | Minor axis (short) = the effective aperture stop. |
+| `mirror_thk` | **4 mm** | **Guess 3–5 mm.** Measure on arrival — drives lip clearance. |
+| `mirror_major` | 0 (auto) | 0 → `minor / cos(tilt)` ≈ 35.36 mm. Set to the measured major once known. |
+| `tilt` | 45° | Mirror tilt vs the light path. |
+| `lip_h` | 1.5 mm | Retaining-lip height. Must stay `< mirror_thk` (asserted). |
+| `lip_w` | 1.5 mm | Lip wall thickness. |
+| `edge_clear` | 0.4 mm | Gap around the mirror edge inside the lip, per side. Printer-tune. |
+| `seat_margin` | 4 mm | Body border around the lip; also sets backing under the mirror ends. |
+
+Secondary **offset** at f/7.9 is <1 mm — negligible for visual, and v1 has no collimation,
+so the mirror is centred (`offset_major`/`offset_minor` = 0, left as future hooks).
+
+### Printing (planned)
+- **Material:** PETG (matches the rest of the scope; light, non-load-bearing part).
+- **Orientation:** print **as modelled — bottom face flat on the bed**, seat facing up as a
+  self-supporting ~45° ramp. That angle is right at the support-free limit; if the seat face
+  or lip sags, add a brim / a hair of support or revisit orientation.
+- **Infill:** 30–40%, 3+ perimeters. The mirror is light — strength is not the concern; a
+  clean flat pad and lip are.
+
+### Bench test (no scope, once the mirror arrives)
+- Print `coupon` first. Dry-set the mirror in the lip: confirm it drops in with a little
+  `edge_clear` play and the lip top sits **below** the reflective face (the render echoes the
+  clearance, e.g. "clears reflective face by 2.5 mm").
+- Then trial the 3 silicone dabs in the pockets before printing the full `holder`.
+
 ## Deliverables (planned)
 
 - `saddle_adapter.scad` — parametric source
