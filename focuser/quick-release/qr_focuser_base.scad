@@ -36,7 +36,8 @@ lock_drop     = 2.8;     // lock centre below the ring top (keeps the pad inside
 // ---- outer skirt (wraps the bracket ring -> radial register + centering) ----
 skirt_od      = 60;      // flush with the bracket pad
 skirt_clear   = 0.6;     // diametral slip-fit gap over the ring OD
-skirt_depth   = 7;       // how far the skirt reaches down the ring
+skirt_depth   = 7.5;     // how far the skirt reaches down the ring (of the 8 mm ring; 0.5 mm
+                         // clearance to the base-pad shoulder so the bayonet still clamps first)
 
 // ---- focuser mount (the sandwich) ----
 flange_od     = 60;      // flush with the skirt / bracket pad
