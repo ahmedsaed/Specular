@@ -57,16 +57,15 @@ thread_rh        = 1;    // 1 = right-hand (standard); -1 if a filter won't thre
 // ---- light path ----
 bore_min       = 24;     // clear bore between the eyepiece stop and the filter (< eyepiece_d)
 
-// ---- eyepiece clamp: radial M3 screw into a CAPTIVE M3 NUT (press the nut in from outside) ----
+// ---- eyepiece clamp: radial M3 screw into a CAPTIVE M3 NUT on the BORE side ----
 //  The eyepiece locates by its own FLANGE resting on the adapter top face; this screw clamps
-//  the barrel so it can't lift out (and lets you remove/swap the eyepiece).
+//  the barrel so it can't lift out. Drop the nut into its pocket from INSIDE the bore before
+//  the eyepiece; the eyepiece barrel then traps it, and it keeps the screw from falling out.
 clamp_screw   = true;
 clamp_angle   = 0;       // where the clamp sits around the flange (deg)
 screw_clear   = 3.4;     // M3 screw-shaft clearance
 nut_af        = 5.9;     // M3 nut across-flats (5.5) + clearance
 nut_thk       = 2.6;     // M3 nut thickness (2.4) + clearance
-boss_out      = 4;       // how far the clamp boss projects past the flange OD
-boss_w        = 11;      // clamp boss tangential width
 
 // ---- render quality ----
 $fn = 96;
@@ -75,7 +74,6 @@ total_h   = barrel_len + flange_h;
 eye_bore  = eyepiece_d + eyepiece_clear;
 stop_z    = total_h - eyepiece_depth;      // eyepiece barrel bottoms no lower than here (safety)
 clamp_z   = barrel_len + flange_h/2;       // mid-flange -> accessible above the focuser
-R_bo      = flange_od/2 + boss_out;        // clamp boss outer radius
 nut_cor   = nut_af / cos(30);              // nut across-corners (hex pocket size)
 
 assert(bore_min < eyepiece_d, "bore_min must be < eyepiece_d so the eyepiece has a stop ledge");
@@ -97,20 +95,15 @@ module filter_thread_neg() {
         }
 }
 
-// ---- radial M3 clamp with a captive nut (nut pressed into the boss from outside) ----
-module clamp_boss() {
-    rotate([0,0, clamp_angle])
-        translate([flange_od/2 - 2, -boss_w/2, barrel_len])
-            cube([boss_out + 2, boss_w, flange_h]);
-}
+// ---- radial M3 clamp with a captive nut on the BORE side (no boss) ----
 module clamp_cuts() {
     rotate([0,0, clamp_angle]) {
-        // screw clearance: outside -> through the nut -> tip reaches the bore (clamps the barrel)
+        // hex nut pocket, opening on the BORE (inner) side; nut inner face flush with the bore
+        translate([eye_bore/2, 0, clamp_z]) rotate([0,90,0])
+            cylinder(d = nut_cor, h = nut_thk, $fn = 6);
+        // screw clearance: outside -> through the nut -> tip reaches the barrel (clamps it)
         translate([eye_bore/2 - 1.5, 0, clamp_z]) rotate([0,90,0])
-            cylinder(d = screw_clear, h = R_bo - eye_bore/2 + 3, $fn = 24);
-        // hex nut pocket, opening on the boss OUTER face
-        translate([R_bo - nut_thk, 0, clamp_z]) rotate([0,90,0])
-            cylinder(d = nut_cor, h = nut_thk + 0.6, $fn = 6);
+            cylinder(d = screw_clear, h = flange_od/2 - eye_bore/2 + 2, $fn = 24);
     }
 }
 
@@ -124,11 +117,10 @@ module undercut_cut() {
 
 module adapter() {
     difference() {
-        // ---- solid body: barrel + flange (+ clamp boss) ----
+        // ---- solid body: barrel + flange ----
         union() {
             cylinder(d = barrel_od, h = barrel_len);
             translate([0,0, barrel_len]) cylinder(d = flange_od, h = flange_h);
-            if (clamp_screw) clamp_boss();
         }
         // ---- stepped bore, top to bottom ----
         translate([0,0, stop_z]) cylinder(d = eye_bore, h = total_h - stop_z + 1);   // eyepiece bore
@@ -155,7 +147,7 @@ module adapter() {
              " (clear ", filter_thread_clear, "), ", filter_thread_len, " mm engagement"));
     if (clamp_screw)
         echo(str("CLAMP: radial M3 screw + captive nut (AF ", nut_af, " x ", nut_thk,
-                 ") in a boss at ", clamp_angle, " deg; eyepiece flange rests on the top face"));
+                 ") on the BORE side (no boss); eyepiece flange rests on the top face"));
 }
 
 // short ring with just the filter thread -- cheap fit test before the full part
