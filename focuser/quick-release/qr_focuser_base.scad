@@ -60,6 +60,18 @@ entry_clear   = 0.5;     // gap under the lip at the ENTRY end of the lug (easy 
 preload       = 0.15;    // interference at the LOCKED end (the clamp). 0 = just touch.
 ramp_dir      = 1;       // which way the ramp rises; flip to -1 if it tightens backwards
 
+// ---- lug-root fillets (anti-detach gussets tying each lug back to the neck wall) ----
+//  The lug cantilevers OUTWARD off the neck, joined only across a thin top-inner band --
+//  a sharp re-entrant corner that concentrates stress, so a knock pries the lug loose.
+//  These add a chamfered gusset that climbs the neck wall onto the lug top (the pry-out /
+//  TOP corner) plus a smaller one on the lug underside (the tension face). The female lip
+//  is relieved (lip_relief_* in qr_bracket.scad) so the top gusset clears on twist.
+root_fil     = true;
+root_fil_r   = 0.9;      // radial spread of the top gusset onto the lug top -> DRIVES the
+                         //   female lip relief (keep lip_relief_r >= this + clearance)
+root_fil_h   = 1.6;      // how far the top gusset climbs the neck wall (more = stiffer root)
+root_fil_bot = 0.9;      // bottom gusset: climbs UNDER the neck rim onto the lug underside
+
 $fn = 120;
 // =====================================================================
 stud_bcd = stud_spacing/sqrt(3)*2;
@@ -89,6 +101,26 @@ module lug() {
         seg = min(step + 0.7, lug_arc - a);
         rotate([0,0, a]) rotate_extrude(angle = seg)
             translate([lug_ir, lug_bot]) square([lug_or - lug_ir, ztop(a) - lug_bot]);
+    }
+}
+
+// lug-root gusset: at the re-entrant corner where the lug top meets the neck wall,
+// sweep a chamfer that climbs the neck wall (root_fil_h, the TOP/pry-out side) and
+// blends DOWN into the lug underside (root_fil_bot, the tension side), spreading
+// root_fil_r out onto the lug top. Follows the same ramp/arc as the lug so it fuses
+// solidly. Grows outward past the neck (nr) toward the lip -> the female is relieved.
+module lug_root_gusset() {
+    step = 2;
+    gm   = 2;                                   // inset from the lug ends so the gusset can't
+                                                //   foul the rotation stop / entry gap
+    nr   = neck_d/2;                            // neck outer wall (the "wall carrying" the lug)
+    for (a = [gm : step : lug_arc - gm - 0.001]) {
+        seg = min(step + 0.7, lug_arc - gm - a);
+        zt  = ztop(a);
+        rotate([0,0, a]) rotate_extrude(angle = seg)
+            polygon([[nr - 0.6, zt - root_fil_bot],   // down the (buried) wall onto the lug
+                     [nr + root_fil_r, zt],           // out onto the lug top (drives lip relief)
+                     [nr - 0.6, zt + root_fil_h]]);   // up the neck wall (ties lug to the body)
     }
 }
 
@@ -128,6 +160,8 @@ module male() {
             translate([0,0, -(bay_ledge_t + 0.6)]) cylinder(d = neck_d, h = bay_ledge_t + 0.62);
             // 3 ramped lugs at the gap angles (0,120,240) so they drop straight in
             for (i = [0:bay_n-1]) rotate([0,0, i*120 - lug_arc/2]) lug();
+            // anti-detach root gussets on each lug (needs the female lip relief)
+            if (root_fil) for (i = [0:bay_n-1]) rotate([0,0, i*120 - lug_arc/2]) lug_root_gusset();
         }
         // light bore
         translate([0,0, -bay_ledge_t-lug_h-1])

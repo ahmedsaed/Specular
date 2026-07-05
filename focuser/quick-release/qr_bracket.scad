@@ -95,6 +95,12 @@ bay_ledge_t   = 2.2;    // lip thickness at the top
 bay_n         = 3;      // number of lugs / gaps
 bay_gap_arc   = 64;     // entry-gap arc (deg) the lugs pass through
 bay_stop_arc  = 4;      // width of the rotation stop
+// lip inner-bottom relief: clears the male lug-root gussets (qr_focuser_base root_fil_*).
+// Chamfers the underside inner edge of the lip so the gussets sweep through on twist.
+// Keep lip_relief_r >= the male root_fil_r + ~0.3 clearance.
+lip_relief    = true;
+lip_relief_r  = 1.2;    // radial cut into the lip inner-bottom edge
+lip_relief_z  = 1.3;    // how far up the lip inner face the relief reaches (< bay_ledge_t)
 
 // ---- lock screw (radial M3; nut is captive in the male skirt) ----
 lock_tap      = 3.3;    // DOWEL hole in the ring for the screw TIP (threads are in
@@ -190,11 +196,19 @@ module bayonet_female() {
         }
         for (i = [0:bay_n-1]) {
             c = (360/bay_n)*(i + 0.5);             // lip centres: 60,180,300 for n=3
-            // lip (the part the lugs hook under)
+            // lip (the part the lugs hook under). z=0 here is the lip UNDERSIDE (the lugs
+            // catch on it); the inner-bottom corner is chamfered so the male root gussets clear.
             rotate([0,0, c - ledge_arc/2])
                 translate([0,0, bay_ring_h - bay_ledge_t])
                     rotate_extrude(angle = ledge_arc)
-                        translate([rr0, 0]) square([rw, bay_ledge_t]);
+                        if (lip_relief)
+                            polygon([[rr0 + lip_relief_r, 0],           // inner-bottom pulled out (relief)
+                                     [rr0 + rw,           0],           // outer-bottom
+                                     [rr0 + rw,           bay_ledge_t], // outer-top
+                                     [rr0,                bay_ledge_t], // inner-top (full lip inner edge)
+                                     [rr0,                lip_relief_z]]); // up the inner face, then chamfer down
+                        else
+                            translate([rr0, 0]) square([rw, bay_ledge_t]);
             // rotation stop at the far end (full height; merges with lip + wall)
             rotate([0,0, c + ledge_arc/2 - bay_stop_arc])
                 rotate_extrude(angle = bay_stop_arc)

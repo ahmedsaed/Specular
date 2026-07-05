@@ -36,6 +36,14 @@ entry_clear   = 0.5;     // gap under the lip at the ENTRY end of the lug (easy 
 preload       = 0.15;    // interference at the LOCKED end (the clamp). 0 = just touch.
 ramp_dir      = 1;       // which way the ramp rises; flip to -1 if it tightens backwards
 
+// ---- lug-root fillets (match qr_focuser_base.scad) ----
+//  Same anti-detach gusset as the focuser base: fills the sharp corner where each lug
+//  cantilevers off the neck wall. Clears the bracket's relieved lip (lip_relief_* there).
+root_fil     = true;
+root_fil_r   = 0.9;      // radial spread onto the lug top (needs lip_relief_r >= this + ~0.3)
+root_fil_h   = 1.6;      // how far the gusset climbs the neck wall
+root_fil_bot = 0.9;      // down-blend onto the lug underside
+
 // ---- gear knob (the lid / grip) ----
 knob_h        = 9;       // knob height above the register face (well under the 19 mm base)
 knob_body_d   = 60;      // solid body diameter (caps the skirt flush)
@@ -66,6 +74,23 @@ module lug() {
         seg = min(step + 0.7, lug_arc - a);
         rotate([0,0, a]) rotate_extrude(angle = seg)
             translate([lug_ir, lug_bot]) square([lug_or - lug_ir, ztop(a) - lug_bot]);
+    }
+}
+
+// lug-root gusset (identical to qr_focuser_base.scad): chamfer at the lug-top <-> neck-wall
+// corner, climbing the wall (root_fil_h) and blending down (root_fil_bot), inset from the
+// lug ends so it can't foul the rotation stop.
+module lug_root_gusset() {
+    step = 2;
+    gm   = 2;
+    nr   = neck_d/2;
+    for (a = [gm : step : lug_arc - gm - 0.001]) {
+        seg = min(step + 0.7, lug_arc - gm - a);
+        zt  = ztop(a);
+        rotate([0,0, a]) rotate_extrude(angle = seg)
+            polygon([[nr - 0.6, zt - root_fil_bot],
+                     [nr + root_fil_r, zt],
+                     [nr - 0.6, zt + root_fil_h]]);
     }
 }
 
@@ -107,6 +132,8 @@ module cover() {
         translate([0,0, -(bay_ledge_t + 0.6)]) cylinder(d = neck_d, h = bay_ledge_t + 0.62);
         // 3 ramped lugs at the gap angles (0,120,240) so they drop straight in
         for (i = [0:bay_n-1]) rotate([0,0, i*120 - lug_arc/2]) lug();
+        // anti-detach root gussets (clears the bracket's relieved lip)
+        if (root_fil) for (i = [0:bay_n-1]) rotate([0,0, i*120 - lug_arc/2]) lug_root_gusset();
     }
     echo(str("COVER: knob ", knob_body_d + tooth_d, " mm OD x ", knob_teeth, " teeth, ",
              knob_h, " mm tall; skirt ", skirt_od, ", lugs at 0/120/240 -- solid top (no bore)"));

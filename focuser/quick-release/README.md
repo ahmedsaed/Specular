@@ -26,6 +26,22 @@ ring lip *before* the skirt can bottom out. Don't let `skirt_depth` reach `bay_r
 and `qr_cover.scad` copy the same bayonet params (`bay_*`, `skirt_*`, `lug_*`) — keep
 them in sync with the bracket.
 
+### Lug-root fillets (anti-detach)
+
+Each lug cantilevers **outward** off the neck and was joined only across a thin
+top-inner band — a sharp re-entrant corner that concentrates stress, so a knock can pry
+a lug loose (observed in use). The male parts add a **root gusset** at that corner
+(`root_fil_*` in `qr_focuser_base.scad` **and** `qr_cover.scad`): a chamfer that climbs
+the neck wall onto the lug top and blends down onto the underside, following the ramp so
+it fuses solidly. It's inset 2° from the lug ends so it can't foul the rotation stop.
+
+Because the gusset grows outward past the neck toward the lip, the bracket's lip is
+**relieved** to clear it: `lip_relief_*` in `qr_bracket.scad` chamfers the lip's
+inner-bottom edge along the full arc (only the empty inner-bottom corner is removed — the
+lug's bearing surface is untouched, so lock strength is unchanged). **Coupling rule:**
+keep `lip_relief_r ≥ root_fil_r + 0.3`. The cover uses the same gusset and mates the same
+relieved lip.
+
 ## Mechanism (v1)
 
 Releasable push-pin from outside. A snug shaft centres in the carbon hole (this
