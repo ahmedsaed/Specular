@@ -63,9 +63,13 @@ bore_min       = 24;     // clear bore between the eyepiece stop and the filter 
 //  the eyepiece; the eyepiece barrel then traps it, and it keeps the screw from falling out.
 clamp_screw   = true;
 clamp_angle   = 0;       // where the clamp sits around the flange (deg)
+clamp_below_top = 5;     // clamp centre this far below the top face (lower = grips the barrel
+                         //   deeper and keeps the nut clear of the flange recess)
 screw_clear   = 3.4;     // M3 screw-shaft clearance
 nut_af        = 5.9;     // M3 nut across-flats (5.5) + clearance
 nut_thk       = 2.6;     // M3 nut thickness (2.4) + clearance
+nut_open      = 1.0;     // how far the nut pocket opens past the bore wall so the nut
+                         //   drops in radially from WITHIN the bore (not from the top)
 
 // ---- render quality ----
 $fn = 96;
@@ -73,7 +77,7 @@ $fn = 96;
 total_h   = barrel_len + flange_h;
 eye_bore  = eyepiece_d + eyepiece_clear;
 stop_z    = total_h - eyepiece_depth;      // eyepiece barrel bottoms no lower than here (safety)
-clamp_z   = barrel_len + flange_h/2;       // mid-flange -> accessible above the focuser
+clamp_z   = total_h - clamp_below_top;     // above the focuser top, below the flange recess
 nut_cor   = nut_af / cos(30);              // nut across-corners (hex pocket size)
 
 assert(bore_min < eyepiece_d, "bore_min must be < eyepiece_d so the eyepiece has a stop ledge");
@@ -98,9 +102,11 @@ module filter_thread_neg() {
 // ---- radial M3 clamp with a captive nut on the BORE side (no boss) ----
 module clamp_cuts() {
     rotate([0,0, clamp_angle]) {
-        // hex nut pocket, opening on the BORE (inner) side; nut inner face flush with the bore
-        translate([eye_bore/2, 0, clamp_z]) rotate([0,90,0])
-            cylinder(d = nut_cor, h = nut_thk, $fn = 6);
+        // hex nut pocket OPEN TO THE BORE: mouth breaks through the bore wall so the nut
+        // drops in radially from within; it seats against the pocket back wall (which
+        // reacts the clamp load) and the eyepiece barrel then traps it in front
+        translate([eye_bore/2 - nut_open, 0, clamp_z]) rotate([0,90,0]) rotate([0,0,30])
+            cylinder(d = nut_cor, h = nut_thk + nut_open, $fn = 6);
         // screw clearance: outside -> through the nut -> tip reaches the barrel (clamps it)
         translate([eye_bore/2 - 1.5, 0, clamp_z]) rotate([0,90,0])
             cylinder(d = screw_clear, h = flange_od/2 - eye_bore/2 + 2, $fn = 24);
