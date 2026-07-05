@@ -69,7 +69,7 @@ lead_in      = 0.4;     // top-of-lip snap bevel (must stay < hook_grip).
 arm_root     = 0.6;     // how far a hook foot sinks into the plate (weld overlap).
 
 // ---- seating (print both, compare) ----
-seat_mode    = "pads";  // "pads" = 3 contact bumps (no rock) | "flat" = full backing.
+seat_mode    = "flat";  // "pads" = 3 contact bumps (no rock) | "flat" = full backing.
 pad_count    = 3;
 pad_d        = 5;
 pad_h        = 0.6;
