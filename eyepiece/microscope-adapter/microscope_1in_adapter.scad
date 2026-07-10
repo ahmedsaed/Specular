@@ -35,6 +35,14 @@ undercut_z     = 3.5;    // groove centre above the barrel bottom
 flange_od      = 41;     // sized to support the eyepiece flange (Ø36.6) + a rim
 flange_h       = 7;
 
+// ---- flange-to-barrel fillet (flare) ----
+//  Printed barrel-down, the flange underside is a flat horizontal shelf = a bad
+//  overhang. A big convex flare from the barrel wall out to the flange OD removes
+//  that shelf and prints self-supporting. Taller = gentler slope (more print-
+//  friendly) but eats barrel insertion depth into the focuser.
+fillet         = true;
+fillet_h       = 12;     // flare height up the barrel (self-supporting near ~45 deg at 12)
+
 // ---- microscope eyepiece side (the top bore; WF 10x/20, measured by circumference) ----
 eyepiece_d     = 24.8;   // barrel OD, from ~78 mm circumference (78/pi). Tune if the fit is off.
 eyepiece_clear = 0.5;    // slip fit (generous: the clamp screw takes up the slack)
@@ -113,6 +121,26 @@ module clamp_cuts() {
     }
 }
 
+// ---- convex flare that carries the barrel wall out to the flange OD ----
+//  A circular arc, tangent to the vertical barrel at the bottom, sweeping out to
+//  the flange OD at the top: replaces the flange-underside overhang with a slope.
+module flange_fillet() {
+    a     = (flange_od - barrel_od)/2;          // radial step from barrel to flange
+    R     = (a*a + fillet_h*fillet_h)/(2*a);    // arc radius (tangent to barrel at bottom)
+    cr    = barrel_od/2 + R;                     // arc centre r
+    cz    = barrel_len - fillet_h;               // arc centre z (= flare start z)
+    a_end = atan2(fillet_h, a - R);              // end angle, at the flange OD
+    steps = 48;
+    rotate_extrude(convexity = 10)
+        polygon(concat(
+            [[0, cz]],
+            [ for (i = [0:steps])
+                let (ang = 180 + (a_end - 180)*i/steps)
+                [cr + R*cos(ang), cz + R*sin(ang)] ],
+            [[0, barrel_len]]
+        ));
+}
+
 module undercut_cut() {
     translate([0,0, undercut_z - undercut_w/2])
         difference() {
@@ -127,6 +155,7 @@ module adapter() {
         union() {
             cylinder(d = barrel_od, h = barrel_len);
             translate([0,0, barrel_len]) cylinder(d = flange_od, h = flange_h);
+            if (fillet) flange_fillet();
         }
         // ---- stepped bore, top to bottom ----
         translate([0,0, stop_z]) cylinder(d = eye_bore, h = total_h - stop_z + 1);   // eyepiece bore
