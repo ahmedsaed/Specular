@@ -29,7 +29,7 @@ barrel_len     = 30;     // barrel length below the flange (into the focuser)
 undercut       = true;   // safety undercut groove near the bottom (focuser thumbscrew catches it)
 undercut_d     = 30.0;   // groove root diameter
 undercut_w     = 2.5;    // groove width
-undercut_z     = 3.5;    // groove centre above the barrel bottom
+undercut_z     = 6.0;    // groove centre above the barrel bottom (kept clear of the filter thread)
 
 // ---- top flange (rests on the focuser top; houses the clamp; grip) ----
 flange_od      = 41;     // sized to support the eyepiece flange (Ø36.6) + a rim
@@ -41,7 +41,7 @@ flange_h       = 7;
 //  that shelf and prints self-supporting. Taller = gentler slope (more print-
 //  friendly) but eats barrel insertion depth into the focuser.
 fillet         = true;
-fillet_h       = 12;     // flare height up the barrel (self-supporting near ~45 deg at 12)
+fillet_h       = 6;     // flare height up the barrel (self-supporting near ~45 deg at 12)
 
 // ---- microscope eyepiece side (the top bore; WF 10x/20, measured by circumference) ----
 eyepiece_d     = 24.8;   // barrel OD, from ~78 mm circumference (78/pi). Tune if the fit is off.
@@ -90,6 +90,8 @@ nut_cor   = nut_af / cos(30);              // nut across-corners (hex pocket siz
 
 assert(bore_min < eyepiece_d, "bore_min must be < eyepiece_d so the eyepiece has a stop ledge");
 assert(stop_z > filter_thread_len, "eyepiece_depth too large -- it overruns the filter thread");
+assert(!undercut || (undercut_z - undercut_w/2 > filter_thread_len),
+       "undercut groove overlaps the filter thread -- raise undercut_z so its bottom clears filter_thread_len");
 
 // ---- female filter thread: subtract this male-form helix from the bore ----
 module filter_thread_neg() {
