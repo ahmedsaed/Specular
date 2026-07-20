@@ -35,7 +35,7 @@ part = "holder";
 // ---- mirror (measure on arrival; re-export) ----
 mirror_minor = 25;      // minor axis (short) = the effective aperture stop, mm
 mirror_major = 0;       // major axis (long). 0 = AUTO from the tilt below.
-mirror_thk   = 4;       // face-to-face thickness. GUESS 3-5 mm -- CONFIRM on arrival.
+mirror_thk   = 5;       // face-to-face thickness. GUESS 3-5 mm -- CONFIRM on arrival.
 mirror_tilt  = 45;      // the tilt the mirror is GROUND for; sets the major/minor ratio.
 mirror_shear = 0;       // sideways offset of the TOP face vs the back, along +major.
                         //   0 = AUTO = mirror_thk (exact for a 45 deg cut). MEASURE on arrival.
