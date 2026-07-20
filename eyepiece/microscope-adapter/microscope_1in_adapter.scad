@@ -59,7 +59,7 @@ filter_thread    = true;
 filter_maj_d     = 28.5; // M28.5
 filter_pitch     = 0.6;  // x 0.6
 filter_thread_len= 4;    // engagement length (a few turns)
-filter_thread_clear = 0.35; // printed-fit clearance (raise if the filter won't start)
+filter_thread_clear = 0.85; // printed-fit clearance (raise if the filter won't start)
 thread_rh        = 1;    // 1 = right-hand (standard); -1 if a filter won't thread
 
 // ---- light path ----
