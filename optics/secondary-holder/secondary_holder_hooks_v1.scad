@@ -39,7 +39,7 @@ mirror_thk   = 5;       // face-to-face thickness. GUESS 3-5 mm -- CONFIRM on ar
 mirror_tilt  = 45;      // the tilt the mirror is GROUND for; sets the major/minor ratio.
 mirror_shear = 0;       // sideways offset of the TOP face vs the back, along +major.
                         //   0 = AUTO = mirror_thk (exact for a 45 deg cut). MEASURE on arrival.
-edge_clear   = 0.4;     // gap between a hook's inner face and the glass edge, per side.
+edge_clear   = 0.15;     // gap between a hook's inner face and the glass edge, per side.
 
 // ---- plate ----
 plate_thk    = 4.5;     // backing-plate thickness (NOT sheared -- prints flat).
@@ -65,6 +65,12 @@ arm_span     = 4;       // hook LENGTH along the edge (deg of arc). Shorter = sm
 hook_grip    = 1.0;     // how far the lip covers the mirror FRONT face (mm). Keep small.
 hook_lip_thk = 1.2;     // vertical thickness of the retaining lip.
 hook_clamp   = 0.05;    // lip underside this far BELOW the front face = light preload.
+lip_droop    = 0.2;     // PRINT COMPENSATION, not geometry. The lip underside is an unsupported
+                        //   ledge; printed without supports it sags. Model it this much HIGH so
+                        //   the sagged part lands on the intended plane. Set 0 for a supported
+                        //   print. NOTE: the -major hooks (240/300 deg) overhang into free air
+                        //   while the +major pair leans back over its own wall -- so the -major
+                        //   pair droops more. Tune to the worst pair.
 lead_in      = 0.4;     // top-of-lip snap bevel (must stay < hook_grip).
 arm_root     = 0.6;     // how far a hook foot sinks into the plate (weld overlap).
 
@@ -100,7 +106,7 @@ hook_over = hook_grip + edge_clear;         // total inward reach of the lip fro
 // heights, measured from the PLATE TOP (local hook frame) ----
 lseat   = (seat_mode == "pads") ? pad_h : 0;  // mirror back plane
 lfront  = lseat + mirror_thk;                 // mirror front (reflective) plane
-llip0   = lfront - hook_clamp;                // lip underside
+llip0   = lfront - hook_clamp + lip_droop;    // lip underside, AS MODELLED (pre-sag)
 larm_h  = llip0 + hook_lip_thk;               // hook total height above the plate top
 
 // absolute z of the mirror back plane, and the shear rate
@@ -275,6 +281,9 @@ echo(str("plate = mirror ellipse (", mirror_minor, " x ", major, ") + hook tabs,
 echo(str("hooks = 4 @ ", arm_off, " deg from the long axis (", arm_angles, "), ",
         arm_span, " deg arc (~", arm_arc, " mm), ", arm_wall, " mm wall; lip grips ", hook_grip, " mm"));
 echo(str("+major hooks lean outward (slide-in) ; -major hooks lean inward (clip)"));
+echo(str("lip underside: modelled at ", llip0, " mm above plate top (glass front = ", lfront,
+        "); after ", lip_droop, " mm sag it should land at ", llip0 - lip_droop,
+        " = ", hook_clamp, " mm of preload. Hook top = ", larm_h, " mm."));
 echo(str("clear minor aperture = ", mirror_minor, " mm"));
 if (center_screw)
     echo(str("centre screw: ", screw_shank_d, " mm shank, ", screw_head_style, " head OD ",
