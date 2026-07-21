@@ -104,6 +104,11 @@ tower_h  = rim_z0 + tower_r*tan_t;          // tallest point, on the focuser sid
 // hex pocket: OpenSCAD's cylinder($fn=6) is sized by CIRCUMdiameter
 nut_cd   = (nut_af + nut_slack) / cos(30);
 
+// The spring is NOT squashed to gap_nom -- it also fills both seat counterbores.
+// Getting this wrong buys a spring that is barely compressed and gives no preload.
+spring_work = gap_nom + 2*spring_seat_h;
+spring_free = spring_work / 0.7;            // ~30% compression at mid-travel
+
 // usable screw-length window (length under the head)
 screw_min = disc_thk + gap_nom + nut_depth + nut_thk;
 screw_max = disc_thk + gap_nom + base_h - 0.5;
@@ -260,7 +265,8 @@ echo(str("mirror face sits ", face_z0, " mm above the tower's mating face, on th
 echo(str("stack height, disc bottom to mirror face = ", disc_thk + gap_nom + face_z0, " mm"));
 echo(str("SCREWS: 3x M3, length under head between ", screw_min, " and ", screw_max,
         " mm -> buy M3x20"));
-echo(str("SPRINGS: 3x compression, OD <= ", spring_seat_d - 0.2, " mm, free length ~",
-        gap_nom + 4, " mm, working at ", gap_nom, " mm"));
+echo(str("SPRINGS: 3x compression, OD <= ", spring_seat_d - 0.2, " mm, ID > ", screw_clear,
+        " mm. Squashed length = ", spring_work, " mm (gap ", gap_nom,
+        " + both seats), so buy free length ~", spring_free, " mm"));
 echo(str("NUTS: 3x M3 hex captured in the tower (side slots), 2x ", stud_d,
         " mm jam nuts on the spider stud"));

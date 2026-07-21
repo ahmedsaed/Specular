@@ -2,42 +2,57 @@
 //  SECONDARY MOUNT  -- v2-PUSH variant. Same tower and pocket as
 //  secondary_mount.scad; DIFFERENT tilt stage.
 //
-//  This is the "3 push screws + central pull" arrangement, for comparison
-//  against the sprung-pull version in secondary_mount.scad. Only the
-//  mating-face features differ -- the mirror pocket geometry is identical
-//  and is documented in that file's header.
+//  This is the "3 push screws + sprung central pull" arrangement, for
+//  comparison against the sprung-pull version in secondary_mount.scad.
+//  Only the mating-face and central features differ -- the mirror pocket
+//  geometry is identical and is documented in that file's header.
 //
 //  HOW IT WORKS
 //    - 3 collimation screws thread through NUTS CAPTURED IN THE DISC.
 //      Their tips bear on the tower's flat mating face and PUSH it away.
 //      Heads on the sky side, reachable past the vanes.
-//    - ONE central member in TENSION pulls the tower back toward the disc.
+//    - The spider's STUD, in tension, pulls the tower back. But it does
+//      not bear on the tower directly: it squeezes a SPRING against a
+//      ledge inside the tower's central shaft. So the pull is compliant.
 //      Screw a tip in -> that corner is pushed away. Back it out -> the
-//      central tension pulls that corner back. 3 corners = 2 tilt axes.
-//    - A single large spring around the central member keeps the joint
-//      preloaded and compliant so the screws stay light to turn.
+//      central spring pulls it back. 3 corners = 2 tilt axes.
 //
-//  THE CENTRE IS CONTESTED -- READ THIS
-//  A textbook push-stage puts a central bolt down the axis, head on the
-//  sky side. But on this scope the spider already has a MALE STUD on that
-//  exact axis. Both cannot occupy it. Resolved here by making the STUD
-//  ITSELF the central tension member:
+//  WHY THE SPRING IS INSIDE THE TOWER, NOT IN THE GAP
+//  A compression spring sitting in the disc-to-tower gap can only push the
+//  two APART -- the same direction the screws already push -- so it fights
+//  the pull instead of providing it. To make a spring pull them together it
+//  has to sit on the far side of the joint, acting through the tension
+//  member. The stud's far end is buried in the spider hub, so the only
+//  available far side is INSIDE the tower, between the pull-nut and a ledge.
+//  That is where it lives:
 //
-//    stud -> clearance hole in the disc (disc located by jam nuts on the
-//    stud) -> central spring -> generous clearance hole up through the
-//    tower base -> threads into a nut that sits on a CONICAL SEAT inside
-//    the tower.
+//        ┌─────────────┐
+//        │   ╔═══╗     │  pull-nut, threaded on the stud
+//        │   ║ § ║     │  spring, compressed between nut and ledge
+//        │  ─╨───╨─    │  ledge -> pushes the TOWER toward the disc
+//        └────────┼────┘
+//                 │ stud, in tension
+//        ═════╤═══╪══  DISC
+//          ↓↓ │  ↓↓     3 screws push
 //
-//  The cone lets the nut rock, so the tower can tilt about it instead of
-//  trying to bend a 5 mm steel stud. That nut is dropped in from above
-//  through the pocket floor -- SO IT MUST BE FITTED BEFORE THE MIRROR IS
-//  BONDED IN. After bonding it is unreachable. That is the main practical
-//  cost of this variant versus the sprung-pull one.
+//  The spring also does what a conical seat would have done -- it lets the
+//  tower rock, with no stiction -- and it holds preload as the PLA creeps,
+//  which a rigid nut-on-plastic seat would not.
+//
+//  THE NUT IS ROTATIONALLY KEYED, AXIALLY FREE. The shaft is HEXAGONAL, so
+//  the nut cannot spin but can slide. You therefore thread the assembly on
+//  by ROTATING THE TOWER, which draws the nut down and compresses the
+//  spring. Rotating the tower also aims the mirror at the focuser; set aim
+//  that way, then trim the gap with the disc's jam nuts.
+//
+//  SPRING AND NUT GO IN THROUGH THE POCKET FLOOR, SO THEY MUST BE FITTED
+//  BEFORE THE MIRROR IS BONDED. After bonding they are unreachable. That
+//  remains this variant's main cost versus the sprung-pull one.
 //
 //  part = "assembly" | "section" | "section_tower" | "tower" | "disc" | "mirror"
 // =====================================================================
 
-part = "section";
+part = "tower";
 
 // ---- mirror ----
 mirror_d     = 25;
@@ -49,38 +64,42 @@ bore_clear   = 0.3;
 
 // ---- tower ----
 wall         = 1.5;
-base_h       = 18;      // taller than the pull variant: has to swallow the central
-                        //   nut seat as well. See the echoed stud-length window.
+base_h       = 12;      // back down to the pull variant's 12: with the cone seat gone,
+                        //   the central hardware lives up the shaft, not in the base.
 rim_drop     = 0.5;
 
 // ---- tilt stage: 3 PUSH screws, nuts captured in the DISC ----
 n_screws     = 3;
-bolt_circle  = 9.5;     // RADIUS to the collimation screws. Pushed out from the pull
-                        //   variant's 9: the DISC has to fit 3 nut pockets AND the central
-                        //   spring seat on one face, and at 9 they were 0.35 mm apart.
+bolt_circle  = 9;       // RADIUS to the collimation screws
 screw_clear  = 3.4;     // M3 clearance
 nut_af       = 5.5;     // M3 DIN934 across flats
 nut_thk      = 2.4;
 nut_slack    = 0.3;
-gap_nom      = 6;       // nominal disc-to-tower gap at mid-travel
-pad_d        = 6;       // shallow seat on the tower for a steel washer under each
-pad_h        = 0.6;     //   screw tip -- stops the point denting the PLA. 0 = omit.
+gap_nom      = 6;       // nominal disc-to-tower gap at mid-travel. NOTHING is in this gap
+                        //   now except the screw tips -- the spring moved inside the tower.
+pad_h        = 0;       // OFF by default. Optional steel washer seat under each screw tip.
+pad_d        = 5.4;     //   Runs the numbers at ~7 N per screw: a cap-screw end bears on
+                        //   PLA at ~1.6 MPa, about 2.6% of its compressive yield. Not
+                        //   enough to indent, so the pads are not needed.
+                        //   IF YOU DO ENABLE THEM (pad_h = 0.6): the washer's HOLE must be
+                        //   SMALLER than the screw, or the tip passes straight through it
+                        //   and lands on the PLA anyway. An M3 washer (3.2 ID) does NOT
+                        //   work under an M3 screw. Use an M2 washer: 2.2 ID, 5.0 OD, 0.3
+                        //   thick -- it is a loose bearing plate, not threaded on anything,
+                        //   so it does not have to match the screw size.
 
 // ---- central tension member = the spider stud ----
 stud_d       = 5;       // MEASURE. Could be M4/M5 or imperial.
-stud_clear   = 0.6;     // clearance in the DISC (disc does not need to tilt)
-stud_tilt_cl = 1.2;     // EXTRA clearance in the TOWER, so it can tilt about the cone.
-                        //   1.2 over pull_seat_z = 11 allows ~6 deg, well past what is
-                        //   needed, while keeping the spring seat wide enough to not
-                        //   let the spring drop into the stud bore.
+stud_clear   = 0.6;     // clearance in the DISC (the disc does not tilt)
+stud_tilt_cl = 1.2;     // EXTRA clearance in the TOWER's lower bore so it can rock.
+                        //   1.2 over ledge_z = 6 allows ~11 deg, far past what is needed.
 pull_nut_af  = 8.0;     // across flats of the nut that threads onto the stud (M5 = 8.0)
 pull_nut_thk = 4.0;     // M5 = 4.0
-pull_seat_z  = 11;      // height of the conical seat above the tower's mating face
-cone_angle   = 90;      // included angle of the seat the nut rocks on
+ledge_z      = 6;       // height of the spring ledge above the tower's mating face
 
-// ---- central spring (bigger than the M3 springs in the pull variant) ----
-c_spring_od  = 8.5;     // ID must clear stud_bore_d or the spring falls into the stud hole
-c_spring_seat_h = 1.5;
+// ---- central spring: lives INSIDE the tower and provides the pull ----
+pull_spring_od   = 8;   // must clear the hex shaft's across-flats
+pull_spring_free = 10;  // free length. Compression is set by how far you thread the nut.
 
 // ---- disc ----
 disc_thk     = 5;
@@ -105,8 +124,14 @@ rim_z0   = face_z0 - rim_drop;
 tower_h  = rim_z0 + tower_r*tan_t;
 
 nut_cd      = (nut_af + nut_slack) / cos(30);
-pull_nut_cd = (pull_nut_af + nut_slack) / cos(30);
-stud_bore_d = stud_d + stud_tilt_cl;          // through the tower, allows tilt
+stud_bore_d = stud_d + stud_tilt_cl;            // lower bore: tilt clearance
+
+// hex shaft the pull-nut slides in: keyed against rotation, free to travel
+shaft_af    = pull_nut_af + nut_slack;
+shaft_cd    = shaft_af / cos(30);
+
+// the annular land the spring actually sits on, at the top of the lower bore
+spring_land = (shaft_af - stud_bore_d) / 2;
 
 // collimation screw: head on the sky face of the disc, through the disc, across the gap
 cscrew_min = disc_thk + gap_nom - 2;
@@ -115,14 +140,16 @@ cscrew_max = disc_thk + gap_nom + 2;
 // NOTE on radial limits: the mating faces of BOTH parts are solid right out to
 // tower_r -- the mirror bore only begins above the pocket floor, far above any of
 // these features. So the limit here is the outer wall, not bore_r.
-assert(bolt_circle + pad_d/2 < tower_r - 0.8,  "washer pads run off the tower's rim");
+assert(bolt_circle + pad_d/2  < tower_r - 0.8, "washer pads run off the tower's rim");
 assert(bolt_circle + nut_cd/2 < tower_r - 0.8, "disc nut pockets break out of the disc rim");
-assert(bolt_circle - nut_cd/2 > (c_spring_od + 0.6)/2 + 0.8,
-       "disc nut pockets crowd the central spring seat -- raise bolt_circle or shrink the spring");
-assert((c_spring_od + 0.6)/2 > stud_bore_d/2 + 0.5,
-       "central spring seat is narrower than the stud bore -- the spring will drop into it");
-assert(pull_seat_z + pull_nut_thk + 1 < base_h,
-       "base_h too short to contain the central nut seat");
+assert(bolt_circle - nut_cd/2 > (stud_d + stud_clear)/2 + 0.8,
+       "disc nut pockets crowd the central stud hole");
+assert(spring_land >= 0.8,
+       "spring has almost no land to sit on -- reduce stud_tilt_cl or use a bigger nut");
+assert(pull_spring_od <= shaft_af,
+       "central spring is wider than the hex shaft it has to sit in");
+assert(ledge_z + pull_spring_free + pull_nut_thk < floor_z0,
+       "spring + nut are taller than the shaft -- raise base_h or shorten the spring");
 assert(rim_drop > 0, "rim_drop must be > 0 or the wall can vignette the outgoing beam");
 
 // ---------------------------------------------------------------------
@@ -144,20 +171,15 @@ module screw_stations() {
 
 // ---------------------------------------------------------------------
 //  Central stud channel, cut from the TOWER. From the mating face upward:
-//    spring seat -> oversize stud bore (tilt clearance) -> conical seat ->
-//    nut pocket -> shaft up through the pocket floor so the nut can be
-//    dropped in and the stud's spare thread has somewhere to go.
+//    round bore (stud passes through, oversize so the tower can rock)
+//    -> LEDGE  -> hex shaft carrying the spring then the nut, running out
+//    through the pocket floor so both can be dropped in from above.
 // ---------------------------------------------------------------------
 module central_channel() {
-    translate([0, 0, -0.01])                                    // central spring seat
-        cylinder(d = c_spring_od + 0.6, h = c_spring_seat_h + 0.01);
-    translate([0, 0, -1])                                       // oversize stud bore
-        cylinder(d = stud_bore_d, h = pull_seat_z + 1);
-    translate([0, 0, pull_seat_z])                              // conical rocking seat
-        cylinder(d1 = stud_bore_d, d2 = pull_nut_cd,
-                 h = (pull_nut_cd - stud_bore_d)/2 / tan(cone_angle/2));
-    translate([0, 0, pull_seat_z])                              // nut pocket + drop-in shaft
-        cylinder(d = pull_nut_cd, h = tower_h);
+    translate([0, 0, -1])                                       // lower bore, tilt clearance
+        cylinder(d = stud_bore_d, h = ledge_z + 1);
+    translate([0, 0, ledge_z])                                  // hex shaft: spring, then nut
+        cylinder(d = shaft_cd, h = tower_h, $fn = 6);
 }
 
 // ---------------------------------------------------------------------
@@ -184,15 +206,13 @@ module tower() {
 //  DISC -- z = 0 is the SKY face (screw heads), z = disc_thk faces the tower.
 //  The collimation nut pockets open on the TOWER-facing face: the screw tip
 //  pushes the tower away, so the reaction seats each nut up against the solid
-//  disc material above it rather than trying to push it out of its pocket.
+//  disc material above it rather than pushing it out of its pocket.
 // ---------------------------------------------------------------------
 module base_disc() {
     difference() {
         cylinder(d = disc_od, h = disc_thk);
         translate([0, 0, -1])                                   // stud clearance
             cylinder(d = stud_d + stud_clear, h = disc_thk + 2);
-        translate([0, 0, disc_thk - c_spring_seat_h])           // central spring seat
-            cylinder(d = c_spring_od + 0.6, h = c_spring_seat_h + 0.01);
         screw_stations() {
             translate([0, 0, -1])                               // screw shank
                 cylinder(d = screw_clear, h = disc_thk + 2);
@@ -215,23 +235,33 @@ module mirror_glass() {
 //  relative to the telescope. Geometrically identical.
 // ---------------------------------------------------------------------
 module assembly() {
+    spring_fitted = pull_spring_free * 0.75;    // indicative compressed length
+
     tower();
     mirror_glass();
     translate([0, 0, -(gap_nom + disc_thk)]) base_disc();
 
-    color("Silver", 0.55) {                                     // central spring
-        translate([0, 0, -gap_nom])
+    color("Silver", 0.55) {
+        translate([0, 0, ledge_z])                              // the pull spring, in the shaft
             difference() {
-                cylinder(d = c_spring_od, h = gap_nom);
-                translate([0, 0, -1]) cylinder(d = c_spring_od - 1.6, h = gap_nom + 2);
+                cylinder(d = pull_spring_od, h = spring_fitted);
+                translate([0, 0, -1])
+                    cylinder(d = pull_spring_od - 1.6, h = spring_fitted + 2);
             }
         screw_stations()                                        // push screws, tips at the tower
             translate([0, 0, -(gap_nom + disc_thk)])
                 cylinder(d = 3, h = gap_nom + disc_thk + pad_h);
     }
+    color("Goldenrod", 0.8)                                     // the pull-nut, keyed in the hex
+        translate([0, 0, ledge_z + spring_fitted])
+            difference() {
+                cylinder(d = shaft_cd, h = pull_nut_thk, $fn = 6);
+                translate([0, 0, -1]) cylinder(d = stud_d, h = pull_nut_thk + 2);
+            }
     color("DimGray", 0.7)                                       // the stud, in tension
         translate([0, 0, -(gap_nom + disc_thk + 8)])
-            cylinder(d = stud_d, h = gap_nom + disc_thk + pull_seat_z + 8);
+            cylinder(d = stud_d, h = gap_nom + disc_thk + ledge_z + spring_fitted
+                                     + pull_nut_thk + 8);
 }
 
 module half_cut() {
@@ -255,12 +285,14 @@ echo(str("PUSH variant. tower = ", tower_od, " mm OD, ", tower_h, " mm tall, bor
 echo(str("OBSTRUCTION: tower OD ", tower_od, " mm = ", 100*tower_od/114, "% of a 114 mm primary"));
 echo(str("stack height, disc sky-face to mirror face = ", disc_thk + gap_nom + face_z0, " mm"));
 echo(str("COLLIMATION SCREWS: 3x M3, length under head ", cscrew_min, " to ", cscrew_max,
-        " mm -> buy M3x16 and expect to run it in"));
+        " mm -> buy M3x16"));
 echo(str("COLLIMATION NUTS: 3x M3 hex, dropped into the DISC's tower-facing face"));
-echo(str("PULL NUT: 1x ", pull_nut_af, " mm A/F to suit the stud thread, sits on the cone ",
-        pull_seat_z, " mm inside the tower -- FIT BEFORE BONDING THE MIRROR"));
-echo(str("STUD must reach ", gap_nom + disc_thk + pull_seat_z,
-        " to ", gap_nom + disc_thk + pull_seat_z + pull_nut_thk,
+echo(str("PULL SPRING: 1x compression, OD <= ", pull_spring_od, " mm, ID > ", stud_bore_d,
+        " mm, free length ", pull_spring_free, " mm. Sits on a ", spring_land,
+        " mm land at z = ", ledge_z, " INSIDE the tower."));
+echo(str("PULL NUT: 1x ", pull_nut_af, " mm A/F to suit the stud thread. Slides in a hex ",
+        "shaft, so it keys against rotation -- thread it on by TURNING THE TOWER."));
+echo(str("  ^ SPRING AND NUT GO IN BEFORE THE MIRROR IS BONDED."));
+echo(str("STUD must reach ", gap_nom + disc_thk + ledge_z, " to ",
+        gap_nom + disc_thk + ledge_z + pull_spring_free + pull_nut_thk,
         " mm below the spider hub face. MEASURE."));
-echo(str("CENTRAL SPRING: 1x compression, OD ", c_spring_od, " mm, ID > ", stud_bore_d,
-        " mm, free length ~", gap_nom + 4, " mm"));
