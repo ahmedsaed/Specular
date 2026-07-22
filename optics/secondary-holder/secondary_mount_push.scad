@@ -52,7 +52,7 @@
 //  part = "assembly" | "section" | "section_tower" | "tower" | "disc" | "mirror"
 // =====================================================================
 
-part = "tower";
+part = "assembly";
 
 // ---- mirror ----
 mirror_d     = 25;
@@ -72,21 +72,32 @@ rim_drop     = 0.5;
 n_screws     = 3;
 bolt_circle  = 9;       // RADIUS to the collimation screws
 screw_clear  = 3.4;     // M3 clearance
-nut_af       = 5.5;     // M3 DIN934 across flats
-nut_thk      = 2.4;
-nut_slack    = 0.3;
+nut_mode     = "pocket";// "pocket" = captured M3 hex nuts | "insert" = M3 heat-set brass.
+                        //   Either way the feature opens on the TOWER-FACING face, so the
+                        //   screw's reaction seats it INTO the disc rather than pushing it
+                        //   out. Installing an insert from the sky face instead would load
+                        //   it in its weakest direction.
+nut_af       = 5.5;     // M3 DIN934 across flats     ] pocket mode
+nut_thk      = 2.4;     //                            ]
+nut_slack    = 0.3;     //                            ]
+insert_hole_d = 4.0;    // insert mode: the HOLE size from the insert's datasheet, NOT its
+                        //   OD -- heat-set inserts want a hole 0.4-0.6 under their OD so
+                        //   there is material to melt and flow into the knurling.
+insert_l      = 4.0;    // insert length. Must not exceed disc_thk.
 gap_nom      = 6;       // nominal disc-to-tower gap at mid-travel. NOTHING is in this gap
                         //   now except the screw tips -- the spring moved inside the tower.
-pad_h        = 0;       // OFF by default. Optional steel washer seat under each screw tip.
-pad_d        = 5.4;     //   Runs the numbers at ~7 N per screw: a cap-screw end bears on
-                        //   PLA at ~1.6 MPa, about 2.6% of its compressive yield. Not
-                        //   enough to indent, so the pads are not needed.
-                        //   IF YOU DO ENABLE THEM (pad_h = 0.6): the washer's HOLE must be
-                        //   SMALLER than the screw, or the tip passes straight through it
-                        //   and lands on the PLA anyway. An M3 washer (3.2 ID) does NOT
-                        //   work under an M3 screw. Use an M2 washer: 2.2 ID, 5.0 OD, 0.3
-                        //   thick -- it is a loose bearing plate, not threaded on anything,
-                        //   so it does not have to match the screw size.
+dimple_d     = 3.5;     // CONE DETENT at each screw tip. Nothing else locates the tower
+dimple_angle = 90;      //   laterally -- the stud has stud_tilt_cl of radial slop -- so
+                        //   without these the tower can walk around inside that slop as
+                        //   the tube swings, which reads as collimation drift.
+                        //   90 deg included is deliberate: the cone is cut into the BED
+                        //   face, so its wall is a 45 deg overhang -- exactly printable.
+                        //   Shallower (120, 150) droops. It is also a standard countersink
+                        //   angle if you ever want to true it up with a drill.
+                        //   dimple_d = 0 to omit. Steel washers were tried here and dropped:
+                        //   at ~7 N the tip bears on PLA at ~2.6% of yield, so there is
+                        //   nothing to protect against, and an M3 washer's 3.2 hole lets an
+                        //   M3 tip pass straight through it anyway.
 
 // ---- central tension member = the spider stud ----
 stud_d       = 5;       // MEASURE. Could be M4/M5 or imperial.
@@ -133,6 +144,11 @@ shaft_cd    = shaft_af / cos(30);
 // the annular land the spring actually sits on, at the top of the lower bore
 spring_land = (shaft_af - stud_bore_d) / 2;
 
+// cone detent depth, and how much of it the screw's end actually sinks into
+dimple_h    = (dimple_d/2) / tan(dimple_angle/2);
+screw_end_d = 2.4;                              // flat on a typical M3 cap-screw end
+dimple_bite = (dimple_d - screw_end_d) / 2 / tan(dimple_angle/2);
+
 // collimation screw: head on the sky face of the disc, through the disc, across the gap
 cscrew_min = disc_thk + gap_nom - 2;
 cscrew_max = disc_thk + gap_nom + 2;
@@ -140,8 +156,17 @@ cscrew_max = disc_thk + gap_nom + 2;
 // NOTE on radial limits: the mating faces of BOTH parts are solid right out to
 // tower_r -- the mirror bore only begins above the pocket floor, far above any of
 // these features. So the limit here is the outer wall, not bore_r.
-assert(bolt_circle + pad_d/2  < tower_r - 0.8, "washer pads run off the tower's rim");
-assert(bolt_circle + nut_cd/2 < tower_r - 0.8, "disc nut pockets break out of the disc rim");
+assert(bolt_circle + dimple_d/2 < tower_r - 0.8, "cone detents run off the tower's rim");
+assert(dimple_d == 0 || dimple_angle <= 90,
+       "dimple_angle > 90 makes the cone wall a sub-45 deg overhang and it will droop -- the detent is cut into the face that sits on the bed");
+assert(dimple_d == 0 || dimple_d > screw_end_d + 0.6,
+       "dimple mouth is barely wider than the screw end -- it will not nest or centre");
+disc_feat_d = (nut_mode == "insert") ? insert_hole_d : nut_cd;
+assert(bolt_circle + disc_feat_d/2 < tower_r - 0.8,
+       "disc nut pockets / insert bores break out of the disc rim");
+assert(nut_mode != "insert" || insert_l <= disc_thk,
+       "heat-set insert is longer than the disc is thick -- raise disc_thk to match");
+assert(nut_mode == "insert" || nut_mode == "pocket", "nut_mode must be \"pocket\" or \"insert\"");
 assert(bolt_circle - nut_cd/2 > (stud_d + stud_clear)/2 + 0.8,
        "disc nut pockets crowd the central stud hole");
 assert(spring_land >= 0.8,
@@ -196,9 +221,10 @@ module tower() {
             slant_above(floor_z0);
         }
         central_channel();
-        if (pad_h > 0)                                          // washer seats under the tips
+        if (dimple_d > 0)                                       // cone detents under the tips
             screw_stations()
-                translate([0, 0, -0.01]) cylinder(d = pad_d, h = pad_h + 0.01);
+                translate([0, 0, -0.01])
+                    cylinder(d1 = dimple_d, d2 = 0, h = dimple_h + 0.01);
     }
 }
 
@@ -216,8 +242,12 @@ module base_disc() {
         screw_stations() {
             translate([0, 0, -1])                               // screw shank
                 cylinder(d = screw_clear, h = disc_thk + 2);
-            translate([0, 0, disc_thk - nut_thk - nut_slack])   // nut pocket, tower side
-                cylinder(d = nut_cd, h = nut_thk + nut_slack + 0.01, $fn = 6);
+            if (nut_mode == "insert")                           // heat-set bore, tower side
+                translate([0, 0, disc_thk - insert_l])
+                    cylinder(d = insert_hole_d, h = insert_l + 0.01);
+            else                                                // hex nut pocket, tower side
+                translate([0, 0, disc_thk - nut_thk - nut_slack])
+                    cylinder(d = nut_cd, h = nut_thk + nut_slack + 0.01, $fn = 6);
         }
     }
 }
@@ -250,7 +280,7 @@ module assembly() {
             }
         screw_stations()                                        // push screws, tips at the tower
             translate([0, 0, -(gap_nom + disc_thk)])
-                cylinder(d = 3, h = gap_nom + disc_thk + pad_h);
+                cylinder(d = 3, h = gap_nom + disc_thk + dimple_bite);
     }
     color("Goldenrod", 0.8)                                     // the pull-nut, keyed in the hex
         translate([0, 0, ledge_z + spring_fitted])
@@ -284,9 +314,15 @@ else                              echo(str("unknown part: ", part));
 echo(str("PUSH variant. tower = ", tower_od, " mm OD, ", tower_h, " mm tall, bore ", bore_d));
 echo(str("OBSTRUCTION: tower OD ", tower_od, " mm = ", 100*tower_od/114, "% of a 114 mm primary"));
 echo(str("stack height, disc sky-face to mirror face = ", disc_thk + gap_nom + face_z0, " mm"));
-echo(str("COLLIMATION SCREWS: 3x M3, length under head ", cscrew_min, " to ", cscrew_max,
-        " mm -> buy M3x16"));
-echo(str("COLLIMATION NUTS: 3x M3 hex, dropped into the DISC's tower-facing face"));
+// These screws SET the gap: whatever protrudes past the disc is where the tower ends up.
+// Too long and the stack simply opens wider than gap_nom, dragging the spring and stud
+// lengths with it. M3x12 lands the tip in the detents at close to the nominal gap.
+echo(str("COLLIMATION SCREWS: 3x M3 socket cap, length under head ", cscrew_min, " to ",
+        cscrew_max, " mm -> buy M3x12 (NOT longer: the tip would hold the gap open)"));
+echo(nut_mode == "insert"
+     ? str("COLLIMATION INSERTS: 3x M3 heat-set brass, ", insert_l, " mm long, into a ",
+           insert_hole_d, " mm bore on the DISC tower-facing face. Fit from THAT face.")
+     : str("COLLIMATION NUTS: 3x M3 hex, dropped into the DISC tower-facing face"));
 echo(str("PULL SPRING: 1x compression, OD <= ", pull_spring_od, " mm, ID > ", stud_bore_d,
         " mm, free length ", pull_spring_free, " mm. Sits on a ", spring_land,
         " mm land at z = ", ledge_z, " INSIDE the tower."));
