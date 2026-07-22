@@ -37,7 +37,7 @@ clocking_angle = 90;
 carbon_hole_d  = 4.0;       // measured hole diameter (set when scope is back)
 
 // ---- pin mode ----
-pin_mode   = "clip";        // "clip"   = grooved pins + C-clips
+pin_mode   = "screw";        // "clip"   = grooved pins + C-clips
                             // "thread" = M4 studs + nuts (steel M4 or the curved nut)
                             // "screw"  = NO pins; captive M4 nut slid into the base from
                             //            the bore side, a 12mm M4 screw driven from inside
@@ -68,7 +68,12 @@ right_hand   = 1;           // 1 = standard RH thread; -1 if a nut won't start
 bscrew_clear = 4.6;     // M4 screw-shaft clearance through the bracket (carbon hole locates it)
 bnut_af      = 7.4;     // M4 nut across-flats (7.0) + 0.4 -> 0.2/side slot & pocket
 bnut_thk     = 3.6;     // slot height: M4 nut (3.2) + 0.4 headroom (screw seats it down on tighten)
-bnut_roof    = 1.6;     // material left above the nut, under the base top (retains the nut)
+bnut_shelf   = 1.8;     // clamp shelf UNDER the nut, measured from THIS hole's saddle face.
+                        // Per-hole, not a global z: the side holes sit ~2.1 mm lower on the
+                        // tube curve than the apex hole, so a single flat nut band left them
+                        // ~2.2 mm further from the wall than the centre one and a 12 mm M4
+                        // could not reach. Referencing each nut to its own saddle face drops
+                        // the two side nuts ~2.5 mm and equalises the screw travel.
 bnut_grip    = 0.3;     // floor ridge at the channel mouth: nut rides over it and is held
 bnut_grip_len= 1.2;     // length of that ridge
 
@@ -225,8 +230,9 @@ module bayonet_female() {
 module nut_slot(p) {
     ah   = atan2(p[1], p[0]);               // this hole's angle
     rh   = stud_bcd/2;                      // hole radius
-    znut_top = top_z - bnut_roof;           // nut band top  (roof above)
-    znut_bot = znut_top - bnut_thk;         // nut band bottom (clamp shelf below)
+    znut_bot = zo(p[0]) + bnut_shelf;       // nut band bottom: fixed shelf over THIS hole's
+                                            //   saddle face (side holes ride lower than apex)
+    znut_top = znut_bot + bnut_thk;         // nut band top (roof above, up to the base top)
     rotate([0,0, ah]) {
         // hex seat at the hole
         translate([rh, 0, znut_bot]) cylinder(d = bnut_af/cos(30), h = bnut_thk + 0.02, $fn = 6);
@@ -240,7 +246,7 @@ module nut_slot(p) {
         translate([rh, 0, -saddle_wrap - 1])
             cylinder(d = bscrew_clear, h = znut_bot + saddle_wrap + 1.2);
         // tip relief through the roof into the socket cavity (keeps the nut, frees the tip)
-        translate([rh, 0, znut_top - 0.01]) cylinder(d = bscrew_clear, h = bnut_roof + 1);
+        translate([rh, 0, znut_top - 0.01]) cylinder(d = bscrew_clear, h = top_z - znut_top + 1);
     }
 }
 
@@ -259,9 +265,17 @@ module bracket() {
             rotate([0,0, lock_angle]) translate([0,0, top_z + bay_ring_h - lock_drop])
                 rotate([0,90,0]) cylinder(d = lock_tap, h = bay_ring_od/2 + 3, $fn = 24);
     }
-    if (pin_mode == "screw")
-        echo(str("BRACKET (screw): captive M4 nut slot, shelf ", top_z - bnut_roof - bnut_thk,
-                 " mm at apex; slide nut from bore, drive 12mm M4 from inside + curved washer"));
+    if (pin_mode == "screw") {
+        // screw travel = curved washer + inner wall -> nut bottom, per hole
+        run_A = (zo(A[0]) + bnut_shelf) - (zi(A[0]) - washer_h);
+        run_B = (zo(B[0]) + bnut_shelf) - (zi(B[0]) - washer_h);
+        echo(str("BRACKET (screw): shelf ", bnut_shelf, " mm under every nut; roof ",
+                 top_z - (zo(A[0]) + bnut_shelf + bnut_thk), " mm apex / ",
+                 top_z - (zo(B[0]) + bnut_shelf + bnut_thk), " mm sides"));
+        echo(str("  M4 travel to nut bottom: apex ", run_A, " side ", run_B,
+                 " mm -> 12 mm screw engages ", 12 - run_A, " / ", 12 - run_B,
+                 " mm of a 3.2 mm nut"));
+    }
     else
         echo(str("BRACKET (", pin_mode, "): pin ", pin_d,
                  " mm. Inner-wall z: A=", zi(A[0]), " B/C=", zi(B[0]),

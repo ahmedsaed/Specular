@@ -51,6 +51,23 @@ stud_spacing  = 36.5;    // -> BCD 42.1 (matches the original screws)
 nut_af        = 7.4;     // M4 hex nut across-flats + clearance
 nut_thk       = 3.4;     // M4 nut thickness + clearance
 screw_clear   = 4.4;     // M4 screw clearance + stud-tip relief
+nut_z         = 2.0;     // nut seat above the register face. The nut used to sit ON the
+                         // register face (nut_z = 0), so the screw had to travel the full
+                         // mount_h to reach it and only caught the last threads. Raising it
+                         // shortens the travel by this much for the same screw.
+                         // The ROOF (nut_z + nut_thk) is what matters: the screw head bears
+                         // on the lid at the top, so tightening pulls the nut UP against the
+                         // roof. The floor below is only there to retain the nut and close
+                         // the register face -- it carries no clamp load.
+nut_sag       = 1.0;     // extra channel height BELOW the nut, for the bridge droop on the
+                         // roof when printing without supports. Goes below, never above:
+                         // raising the roof would carry the nut up with it and undo the
+                         // travel gained by nut_z. Floor thins to nut_z - nut_sag.
+nut_slide     = true;    // slide the nut in radially from the bore (floor + roof hold it)
+                         // instead of dropping it into a pocket open at the register face
+nut_grip      = 0.3;     // floor ridge at the channel mouth: the nut rides over it and is
+                         // then held from sliding back out toward the bore
+nut_grip_len  = 1.2;     // length of that ridge
 clocking_angle = 90;
 
 // ---- lugs + clamp ramp ----
@@ -166,18 +183,35 @@ module male() {
         // light bore
         translate([0,0, -bay_ledge_t-lug_h-1])
             cylinder(d = bore_d, h = flange_thk + bay_ledge_t + lug_h + 2);
-        // sandwich at the screw BCD (90,210,330): captive M4 hex nut at the BOTTOM
-        // (inserted from the lug side before the focuser goes on), full-height screw
-        // clearance above it. The tall base means the screw reaches the bottom nut
-        // without its tip poking far past into the socket.
-        for (i = [0:2]) rotate([0,0, clocking_angle + i*120]) translate([stud_bcd/2, 0, 0]) {
-            translate([0,0,-0.01]) cylinder(d = screw_clear, h = flange_thk + 1);          // screw clearance
-            translate([0,0,-0.01]) cylinder(d = nut_af/cos(30), h = nut_thk + 0.01, $fn = 6); // captive nut, bottom
+        // sandwich at the screw BCD (90,210,330): captive M4 hex nut near the bottom,
+        // sitting nut_z above the register face on a solid floor, with full-height screw
+        // clearance above it. The clearance continues DOWN through the floor as tip relief,
+        // so an over-long screw behaves exactly as it did when the nut sat on the face.
+        for (i = [0:2]) rotate([0,0, clocking_angle + i*120]) {
+            translate([stud_bcd/2, 0, -0.01])                                  // screw clearance
+                cylinder(d = screw_clear, h = flange_thk + 1);                 //   + tip relief
+            translate([stud_bcd/2, 0, nut_z - nut_sag])                        // hex seat, dropped
+                cylinder(d = nut_af/cos(30), h = nut_thk + nut_sag, $fn = 6);  //   by the sag
+            if (nut_slide)                                                     // slide-in channel
+                difference() {                                                 //   from the bore
+                    translate([0, -nut_af/2, nut_z - nut_sag])
+                        cube([stud_bcd/2, nut_af, nut_thk + nut_sag]);
+                    translate([bore_d/2 - 0.5, -nut_af/2 - 0.1, nut_z - nut_sag])
+                        cube([nut_grip_len, nut_af + 0.2, nut_grip]);          // ridge = retention
+                }
         }
         lock_nut_cuts();   // screw clearance + captive-nut pocket + insert slot
     }
     echo(str("MALE: flange ", flange_od, " neck ", neck_d, " lug r ", lug_ir, "-", lug_or,
              " at 0/120/240; nuts at ", clocking_angle, "/210/330 (BCD ", stud_bcd, ")"));
+    echo(str("  nut channel z ", nut_z - nut_sag, "-", nut_z + nut_thk, " (", nut_thk + nut_sag,
+             " mm clear for a 3.2 mm nut + ", nut_sag, " mm bridge droop) on a ",
+             nut_z - nut_sag, " mm floor, roof ", flange_thk - nut_z - nut_thk, " mm."));
+    echo(str("  nut is pulled UP onto the roof at z ", nut_z + nut_thk,
+             ", so M4 from the top face (z ", flange_thk, ") starts biting at ",
+             flange_thk - nut_z - nut_thk, " mm long and is fully through the nut at ",
+             flange_thk - nut_z - nut_thk + 3.2,
+             " mm; past ", flange_thk, " mm the tip pokes below the register face."));
 }
 
 male();

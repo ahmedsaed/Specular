@@ -42,6 +42,50 @@ lug's bearing surface is untouched, so lock strength is unchanged). **Coupling r
 keep `lip_relief_r ≥ root_fil_r + 0.3`. The cover uses the same gusset and mates the same
 relieved lip.
 
+## Captive nut heights
+
+Both halves hold M4 nuts that a screw has to reach across a long run, and both were
+originally set too far from the screw head.
+
+**Bracket (`bnut_shelf`, screw mode).** The three tube holes do *not* sit at the same
+height: the tube curves away, so the two side holes are **2.1 mm lower** than the apex
+hole. A single flat nut band therefore left the side nuts ~2.2 mm further from the wall,
+and a 12 mm M4 only bit **0.7 mm** into them (vs 2.9 mm at the apex). Each nut is now
+referenced to **its own** saddle face — `bnut_shelf` mm of clamp shelf underneath — which
+drops the two side nuts 2.5 mm and equalises the screws at **2.7 / 2.6 mm** of engagement.
+
+`bnut_shelf` is bounded on both sides: the nut's slide-in channel from the bore runs
+uphill toward the apex, so going below ~1.6 mm feathers the channel floor out through the
+saddle contact face near the bore mouth; going above ~2.2 mm eats the roof over the apex
+nut. **1.8 mm** is the middle of that window.
+
+**Focuser base (`nut_z`).** The nut used to sit *on* the register face, so the screw had
+to cross the whole `mount_h` (19 mm) to reach it and caught only its last threads. It now
+sits `nut_z` = 2 mm up and slides in radially from the bore, held by a floor + roof instead
+of dropping into a face-open pocket. The screw clearance still runs down *through* that
+floor as tip relief, so an over-long screw behaves exactly as before — past 19 mm the tip
+pokes below the register face and holds the joint off the ring.
+
+### Which face the nut bears on (the two halves are opposite)
+
+This decides where you add clearance, and it is **not** the same in both parts:
+
+- **Focuser base** — the screw head bears on the focuser lid at the *top*, so tightening
+  pulls the nut **UP onto the pocket roof** (`nut_z + nut_thk` = 5.4). The roof is the
+  load-bearing face and sets where the nut really ends up; the floor below it only retains
+  the nut and closes the register face.
+- **Bracket** — the screw is driven *up* from inside the cage, so tightening pulls the nut
+  **DOWN onto the shelf** (`bnut_shelf`). There the floor is structural and the roof is not.
+
+So the base's `nut_sag` = 1 mm of bridge-droop clearance for support-free printing is added
+**below** the nut (channel z 1.0–5.4, floor thinned to 1 mm), leaving the roof where it is.
+Putting it above would have raised the roof, carried the nut up with it, and given back half
+the travel `nut_z` just bought. The bracket's channel is unchanged at 3.6 mm — its droop
+hangs off a non-structural roof and those nuts already went in on the printed part.
+
+Verified by intersecting the two solids in the locked position: the only contact is the
+intended 0.12 mm lug/lip preload at z ≈ 12.6, nothing near the nut pockets.
+
 ## Mechanism (v1)
 
 Releasable push-pin from outside. A snug shaft centres in the carbon hole (this
