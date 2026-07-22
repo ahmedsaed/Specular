@@ -104,12 +104,12 @@ stud_d       = 5;       // MEASURE. Could be M4/M5 or imperial.
 stud_clear   = 0.6;     // clearance in the DISC (the disc does not tilt)
 stud_tilt_cl = 1.2;     // EXTRA clearance in the TOWER's lower bore so it can rock.
                         //   1.2 over ledge_z = 6 allows ~11 deg, far past what is needed.
-pull_nut_af  = 8.0;     // across flats of the nut that threads onto the stud (M5 = 8.0)
-pull_nut_thk = 4.0;     // M5 = 4.0
+pull_nut_af  = 0;       // nut that threads onto the stud. 0 = AUTO from stud_d (DIN 934).
+pull_nut_thk = 0;       //   Set both explicitly only for an imperial or odd stud.
 ledge_z      = 6;       // height of the spring ledge above the tower's mating face
 
 // ---- central spring: lives INSIDE the tower and provides the pull ----
-pull_spring_od   = 8;   // must clear the hex shaft's across-flats
+pull_spring_od   = 0;   // 0 = AUTO, the widest that fits the hex shaft.
 pull_spring_free = 10;  // free length. Compression is set by how far you thread the nut.
 
 // ---- disc ----
@@ -137,12 +137,23 @@ tower_h  = rim_z0 + tower_r*tan_t;
 nut_cd      = (nut_af + nut_slack) / cos(30);
 stud_bore_d = stud_d + stud_tilt_cl;            // lower bore: tilt clearance
 
+// DIN 934 hex nut dimensions, so changing stud_d carries the nut and shaft with it
+function din934_af(d)  = (d<=3) ? 5.5 : (d<=4) ? 7.0 : (d<=5) ?  8.0 : (d<=6) ? 10.0
+                       : (d<=8) ? 13.0 : 0;
+function din934_thk(d) = (d<=3) ? 2.4 : (d<=4) ? 3.2 : (d<=5) ?  4.0 : (d<=6) ?  5.0
+                       : (d<=8) ?  6.5 : 0;
+pull_nut_af_  = (pull_nut_af  == 0) ? din934_af(stud_d)  : pull_nut_af;
+pull_nut_thk_ = (pull_nut_thk == 0) ? din934_thk(stud_d) : pull_nut_thk;
+
 // hex shaft the pull-nut slides in: keyed against rotation, free to travel
-shaft_af    = pull_nut_af + nut_slack;
+shaft_af    = pull_nut_af_ + nut_slack;
 shaft_cd    = shaft_af / cos(30);
 
 // the annular land the spring actually sits on, at the top of the lower bore
 spring_land = (shaft_af - stud_bore_d) / 2;
+
+// widest spring/tube the shaft will take
+pull_spring_od_ = (pull_spring_od == 0) ? shaft_af - 0.3 : pull_spring_od;
 
 // cone detent depth, and how much of it the screw's end actually sinks into
 dimple_h    = (dimple_d/2) / tan(dimple_angle/2);
@@ -171,9 +182,9 @@ assert(bolt_circle - nut_cd/2 > (stud_d + stud_clear)/2 + 0.8,
        "disc nut pockets crowd the central stud hole");
 assert(spring_land >= 0.8,
        "spring has almost no land to sit on -- reduce stud_tilt_cl or use a bigger nut");
-assert(pull_spring_od <= shaft_af,
+assert(pull_spring_od_ <= shaft_af,
        "central spring is wider than the hex shaft it has to sit in");
-assert(ledge_z + pull_spring_free + pull_nut_thk < floor_z0,
+assert(ledge_z + pull_spring_free + pull_nut_thk_ < floor_z0,
        "spring + nut are taller than the shaft -- raise base_h or shorten the spring");
 assert(rim_drop > 0, "rim_drop must be > 0 or the wall can vignette the outgoing beam");
 
@@ -274,9 +285,9 @@ module assembly() {
     color("Silver", 0.55) {
         translate([0, 0, ledge_z])                              // the pull spring, in the shaft
             difference() {
-                cylinder(d = pull_spring_od, h = spring_fitted);
+                cylinder(d = pull_spring_od_, h = spring_fitted);
                 translate([0, 0, -1])
-                    cylinder(d = pull_spring_od - 1.6, h = spring_fitted + 2);
+                    cylinder(d = pull_spring_od_ - 1.6, h = spring_fitted + 2);
             }
         screw_stations()                                        // push screws, tips at the tower
             translate([0, 0, -(gap_nom + disc_thk)])
@@ -285,13 +296,13 @@ module assembly() {
     color("Goldenrod", 0.8)                                     // the pull-nut, keyed in the hex
         translate([0, 0, ledge_z + spring_fitted])
             difference() {
-                cylinder(d = shaft_cd, h = pull_nut_thk, $fn = 6);
-                translate([0, 0, -1]) cylinder(d = stud_d, h = pull_nut_thk + 2);
+                cylinder(d = shaft_cd, h = pull_nut_thk_, $fn = 6);
+                translate([0, 0, -1]) cylinder(d = stud_d, h = pull_nut_thk_ + 2);
             }
     color("DimGray", 0.7)                                       // the stud, in tension
         translate([0, 0, -(gap_nom + disc_thk + 8)])
             cylinder(d = stud_d, h = gap_nom + disc_thk + ledge_z + spring_fitted
-                                     + pull_nut_thk + 8);
+                                     + pull_nut_thk_ + 8);
 }
 
 module half_cut() {
@@ -323,12 +334,12 @@ echo(nut_mode == "insert"
      ? str("COLLIMATION INSERTS: 3x M3 heat-set brass, ", insert_l, " mm long, into a ",
            insert_hole_d, " mm bore on the DISC tower-facing face. Fit from THAT face.")
      : str("COLLIMATION NUTS: 3x M3 hex, dropped into the DISC tower-facing face"));
-echo(str("PULL SPRING: 1x compression, OD <= ", pull_spring_od, " mm, ID > ", stud_bore_d,
+echo(str("PULL SPRING: 1x compression, OD <= ", pull_spring_od_, " mm, ID > ", stud_bore_d,
         " mm, free length ", pull_spring_free, " mm. Sits on a ", spring_land,
         " mm land at z = ", ledge_z, " INSIDE the tower."));
-echo(str("PULL NUT: 1x ", pull_nut_af, " mm A/F to suit the stud thread. Slides in a hex ",
+echo(str("PULL NUT: 1x ", pull_nut_af_, " mm A/F to suit the stud thread. Slides in a hex ",
         "shaft, so it keys against rotation -- thread it on by TURNING THE TOWER."));
 echo(str("  ^ SPRING AND NUT GO IN BEFORE THE MIRROR IS BONDED."));
 echo(str("STUD must reach ", gap_nom + disc_thk + ledge_z, " to ",
-        gap_nom + disc_thk + ledge_z + pull_spring_free + pull_nut_thk,
+        gap_nom + disc_thk + ledge_z + pull_spring_free + pull_nut_thk_,
         " mm below the spider hub face. MEASURE."));
