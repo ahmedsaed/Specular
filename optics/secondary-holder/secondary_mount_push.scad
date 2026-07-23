@@ -1,30 +1,35 @@
 // =====================================================================
-//  SECONDARY MOUNT  -- v2-PUSH variant. Same tower and pocket as
-//  secondary_mount.scad; DIFFERENT tilt stage.
+//  SECONDARY MOUNT  -- v2: BONDED POCKET + 3-SCREW TILT STAGE
+//  (3 push screws opposed by a sprung central pull on the spider stud)
 //
-//  This is the "3 push screws + sprung central pull" arrangement, for
-//  comparison against the sprung-pull version in secondary_mount.scad.
-//  Only the mating-face and central features differ -- the mirror pocket
-//  geometry is identical and is documented in that file's header.
+//  Replaces the v1 snap-arm clamp (see secondary_holder_hooks_v1.scad,
+//  which works but relies partly on side friction and has no collimation
+//  adjustment). Two printed parts:
 //
-//  HOW IT WORKS
-//    - 3 collimation screws thread through NUTS CAPTURED IN THE DISC.
-//      Their tips bear on the tower's flat mating face and PUSH it away.
-//      Heads on the sky side, reachable past the vanes.
-//    - The spider's STUD, in tension, pulls the tower back. But it does
-//      not bear on the tower directly: it squeezes a SPRING against a
-//      ledge inside the tower's central shaft. So the pull is compliant.
-//      Screw a tip in -> that corner is pushed away. Back it out -> the
-//      central spring pulls it back. 3 corners = 2 tilt axes.
+//    TOWER  -- a cylinder cut at 45 deg. The mirror drops STRAIGHT DOWN the
+//              tower axis into a plain cylindrical bore with a 45 deg floor
+//              and is bonded in with 3 dabs of NEUTRAL-CURE RTV (never CA --
+//              it hazes the coating). Bond + pocket friction retain it, no clips.
+//    DISC   -- a flat disc clamped to the spider's central stud by two jam
+//              nuts. Carries the 3 collimation screws.
 //
-//  WHY THE SPRING IS INSIDE THE TOWER, NOT IN THE GAP
-//  A compression spring sitting in the disc-to-tower gap can only push the
-//  two APART -- the same direction the screws already push -- so it fights
-//  the pull instead of providing it. To make a spring pull them together it
-//  has to sit on the far side of the joint, acting through the tension
-//  member. The stud's far end is buried in the spider hub, so the only
-//  available far side is INSIDE the tower, between the pull-nut and a ledge.
-//  That is where it lives:
+//  WHY THE POCKET IS JUST A BORE: the mirror was cut from a round glass rod
+//  at 45 deg, and that rod's axis IS the tube axis -- the 25 mm minor axis is
+//  simply the beam cross-section it intercepts. So along the tower axis the
+//  glass is a plain cylinder, and its shear is already baked in. Do NOT model
+//  the pocket by extruding the mirror ELLIPSE perpendicular to the 45 deg
+//  face: the mirror is an oblique prism whose back ellipse sits a full
+//  mirror_thk off the front one, so a right-prism pocket misses by 5 mm at
+//  the bottom and the glass will not go in.
+//
+//  TILT STAGE
+//    - 3 collimation screws thread through nuts (or heat-set inserts) CAPTURED
+//      IN THE DISC. Their tips bear on the tower's flat mating face and PUSH it
+//      away. Heads on the sky side, reached from the front opening past the vanes.
+//    - The spider's STUD, in tension, pulls the tower back -- but not directly:
+//      it squeezes a SPRING against a ledge inside the tower's central shaft, so
+//      the pull is compliant. Screw a tip in -> that corner is pushed away. Back
+//      it out -> the spring pulls it back. 3 corners = 2 tilt axes.
 //
 //        ┌─────────────┐
 //        │   ╔═══╗     │  pull-nut, threaded on the stud
@@ -35,24 +40,30 @@
 //        ═════╤═══╪══  DISC
 //          ↓↓ │  ↓↓     3 screws push
 //
-//  The spring also does what a conical seat would have done -- it lets the
-//  tower rock, with no stiction -- and it holds preload as the PLA creeps,
-//  which a rigid nut-on-plastic seat would not.
+//  A compression spring in the disc-to-tower GAP would only push the two apart
+//  (the way the screws already do), so the spring lives INSIDE the tower, on the
+//  far side of the joint, to pull instead. It also lets the tower rock with no
+//  stiction and holds preload as the PLA creeps. The pull-nut sits in a HEXAGONAL
+//  shaft -- keyed against rotation, free to slide -- so you thread the assembly on
+//  by ROTATING THE TOWER, which also aims the mirror at the focuser; set aim that
+//  way, then trim the gap with the disc's jam nuts.
 //
-//  THE NUT IS ROTATIONALLY KEYED, AXIALLY FREE. The shaft is HEXAGONAL, so
-//  the nut cannot spin but can slide. You therefore thread the assembly on
-//  by ROTATING THE TOWER, which draws the nut down and compresses the
-//  spring. Rotating the tower also aims the mirror at the focuser; set aim
-//  that way, then trim the gap with the disc's jam nuts.
+//  SPRING AND NUT GO IN THROUGH THE POCKET FLOOR, BEFORE THE MIRROR IS BONDED.
+//  After bonding they are unreachable.
 //
-//  SPRING AND NUT GO IN THROUGH THE POCKET FLOOR, SO THEY MUST BE FITTED
-//  BEFORE THE MIRROR IS BONDED. After bonding they are unreachable. That
-//  remains this variant's main cost versus the sprung-pull one.
+//  OBSTRUCTION: everything sits between the sky and the glass, so the binding
+//  dimension is the tower OD = bore + 2*wall. At 28.3 mm that is 24.8% of a
+//  114 mm primary by diameter. Do not let `wall` grow casually.
+//
+//  NO RIM ABOVE THE GLASS on the focuser side: the 45 deg cut is HIGHEST there,
+//  exactly where the reflected cone exits. `rim_drop` keeps the wall below the face.
+//
+//  MEASURE mirror_thk and the spider stud on arrival. Stud confirmed M6.
 //
 //  part = "assembly" | "section" | "section_tower" | "tower" | "disc" | "mirror"
 // =====================================================================
 
-part = "assembly";
+part = "tower";
 
 // ---- mirror ----
 mirror_d     = 25;
@@ -64,8 +75,8 @@ bore_clear   = 0.3;
 
 // ---- tower ----
 wall         = 1.5;
-base_h       = 12;      // back down to the pull variant's 12: with the cone seat gone,
-                        //   the central hardware lives up the shaft, not in the base.
+base_h       = 12;      // solid height below the pocket floor. Holds the ledge + spring;
+                        //   the pull-nut and spare thread run up the shaft above it.
 rim_drop     = 0.5;
 
 // ---- tilt stage: 3 PUSH screws, nuts captured in the DISC ----
@@ -99,8 +110,19 @@ dimple_angle = 90;      //   laterally -- the stud has stud_tilt_cl of radial sl
                         //   nothing to protect against, and an M3 washer's 3.2 hole lets an
                         //   M3 tip pass straight through it anyway.
 
+// ---- finger notch ----
+// Retention is by the RTV bond plus the pocket's own friction -- no clips. (Snap tabs
+// were tried and removed: too small to add real hold, and fiddly to print at this size.)
+notch_enable = true;
+notch_angle  = 0;               // THE TOP TIP (focuser side, highest rim). A cutout only
+                                //   removes material, so it costs the beam nothing here, and
+                                //   the exposed glass edge is easiest to reach from the top.
+notch_width  = 8;               // tangential width of the finger scallop
+notch_depth  = 3;               // how far below the local rim the scallop cuts down, exposing
+                                //   the glass edge so you can push the mirror out
+
 // ---- central tension member = the spider stud ----
-stud_d       = 5;       // MEASURE. Could be M4/M5 or imperial.
+stud_d       = 6;       // MEASURE. Could be M4/M5 or imperial.
 stud_clear   = 0.6;     // clearance in the DISC (the disc does not tilt)
 stud_tilt_cl = 1.2;     // EXTRA clearance in the TOWER's lower bore so it can rock.
                         //   1.2 over ledge_z = 6 allows ~11 deg, far past what is needed.
@@ -219,7 +241,20 @@ module central_channel() {
 }
 
 // ---------------------------------------------------------------------
-//  TOWER -- printed flat-end DOWN, 45 deg cut UP. Self-supporting.
+function rim_z_at(phi) = rim_z0 + bore_r*cos(phi)*tan_t;
+
+// finger scallop: removes the top notch_depth of the wall over notch_width, so a
+// fingertip or tool can reach the glass edge and push the mirror back out
+module notch_cut() {
+    rotate([0, 0, notch_angle])
+        translate([bore_r, 0, rim_z_at(notch_angle) - notch_depth])
+            translate([-1, -notch_width/2, 0])
+                cube([wall + 2, notch_width, tower_h]);
+}
+
+// ---------------------------------------------------------------------
+//  TOWER -- printed flat-end DOWN, 45 deg cut UP. Fully self-supporting.
+//  In the telescope the 45 deg end points at the primary.
 // ---------------------------------------------------------------------
 module tower() {
     difference() {
@@ -236,6 +271,7 @@ module tower() {
             screw_stations()
                 translate([0, 0, -0.01])
                     cylinder(d1 = dimple_d, d2 = 0, h = dimple_h + 0.01);
+        if (notch_enable) notch_cut();
     }
 }
 

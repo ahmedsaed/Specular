@@ -1,8 +1,9 @@
 # Secondary mirror holder — v1 (snap-arm clamp) (`secondary_holder_hooks_v1.scad`)
 
-> **Superseded by v2** — see `secondary_mount.scad` (bonded pocket + 3-screw
-> sprung tilt stage). v1 works and holds the mirror securely, but retains
-> partly by side friction and has no collimation adjustment. Kept for record.
+> **Superseded by v2** — see `secondary_mount_push.scad` (bonded pocket + 3-screw
+> tilt stage: 3 push screws opposed by a sprung central pull on the spider stud).
+> v1 works and holds the mirror securely, but retains partly by side friction and
+> has no collimation adjustment. Kept for record.
 
 The original **secondary** mirror was **glued** straight to its mount by the builder
 and **detached during collimation on 2026-06-25**. A replacement 25 mm elliptical
